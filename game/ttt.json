@@ -1,0 +1,23 @@
+{
+  "board": [
+    "",
+    "",
+    "",
+    "",
+    "X",
+    "O",
+    "",
+    "",
+    ""
+  ],
+  "players": [
+    "Batsaikhann"
+  ],
+  "stats": {
+    "X": 0,
+    "O": 0,
+    "draw": 0
+  },
+  "last": null,
+  "log": []
+}
