@@ -167,15 +167,24 @@ def contributions_svg(total, weeks):
     return window(w, h, f"{USER.lower()} — contributions.sh", "".join(body))
 
 
+PORTRAIT_SRC = os.path.join(OUT, "portrait-source.png")
+
+
 def ascii_portrait(avatar_url, cols=74, rows=44):
-    with urllib.request.urlopen(avatar_url) as r:
-        img = Image.open(io.BytesIO(r.read())).convert("L")
-    img = ImageOps.autocontrast(ImageEnhance.Contrast(img).enhance(1.4))
-    img = img.resize((cols, rows))
+    """Return rows of (char, brightness) pairs, from a face-cropped source if present."""
+    if os.path.exists(PORTRAIT_SRC):
+        img = Image.open(PORTRAIT_SRC)
+    else:
+        with urllib.request.urlopen(avatar_url) as r:
+            img = Image.open(io.BytesIO(r.read()))
+    img = ImageOps.equalize(img.convert("L")).resize((cols, rows))
     # bright pixels -> dense glyphs, since the card background is dark
     ramp = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
     px = img.load()
-    return ["".join(ramp[px[x, y] * (len(ramp) - 1) // 255] for x in range(cols)) for y in range(rows)]
+    return [
+        [(ramp[max(1, px[x, y] * (len(ramp) - 1) // 255)], px[x, y]) for x in range(cols)]
+        for y in range(rows)
+    ]
 
 
 def whoami_svg(avatar_url, total, s):
@@ -188,9 +197,14 @@ def whoami_svg(avatar_url, total, s):
     lines = ascii_portrait(avatar_url)
     lh = 7.6
     for i, line in enumerate(lines):
+        spans = "".join(
+            f'<tspan fill="rgb({int((40 + v * 0.85) * 0.55)},{int(40 + v * 0.85)},{int((40 + v * 0.85) * 0.6)})">'
+            f"{escape(ch)}</tspan>"
+            for ch, v in line
+        )
         body.append(
-            f'<text x="{px0 + pw / 2}" y="{py0 + 34 + i * lh}" fill="{TEXT}" font-size="8.6" '
-            f'text-anchor="middle" xml:space="preserve" opacity="0.9">{escape(line)}</text>'
+            f'<text x="{px0 + pw / 2}" y="{py0 + 34 + i * lh}" font-size="8.6" '
+            f'text-anchor="middle" xml:space="preserve">{spans}</text>'
         )
     # stats panel
     sx0, sy0, sw = 440, 80, 440
