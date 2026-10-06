@@ -8,7 +8,7 @@ import os
 import re
 from xml.sax.saxutils import escape
 
-from generate import BG, BORDER, GREEN, LEVELS, MUTED, PANEL, TEXT, USER, graphql, prompt, window
+from generate import BG, BORDER, GOLD, GREEN, LEVELS, MUTED, PANEL, TEXT, USER, graphql, prompt, window
 
 # commit timestamps are shown in the owner's local time
 TZ = dt.timezone(dt.timedelta(hours=float(os.environ.get("TZ_OFFSET_HOURS", "8"))))
@@ -50,7 +50,7 @@ def city_svg(total, weeks, s):
     ox, oy = w / 2 + 40 - (len(weeks) - 7) / 2 * cw, 150
     days = [(wi, d) for wi, week in enumerate(weeks) for d in week["contributionDays"]]
     mx = max((d["contributionCount"] for _, d in days), default=1) or 1
-    body = [prompt(w / 2, 60, "./city.sh --render 3d", "middle")]
+    body = [prompt(w / 2, 60, "./contributions.sh --city ulaanbaatar", "middle")]
     tiles = []
     for wi, d in days:
         row = (dt.date.fromisoformat(d["date"]).weekday() + 1) % 7
@@ -90,7 +90,12 @@ def city_svg(total, weeks, s):
             f'<text x="28" y="{y}" font-size="12"><tspan fill="{MUTED}">{k:<8}</tspan>'
             f'<tspan fill="{GREEN}" font-weight="700" xml:space="preserve"> {escape(v)}</tspan></text>'
         )
-    return window(w, h, f"{USER.lower()} — city.sh", "".join(body))
+    body.append(
+        f'<text x="{w - 28}" y="110" fill="{GOLD}" font-size="12" font-weight="700" letter-spacing="2" '
+        f'text-anchor="end">CODE CITY / ULAANBAATAR</text>'
+        f'<text x="{w - 28}" y="128" fill="{MUTED}" font-size="10" text-anchor="end">one tower per day · height = contributions</text>'
+    )
+    return window(w, h, f"{USER.lower()} — code-city", "".join(body))
 
 
 # ---------------------------------------------------------------- clock + achievements
@@ -109,9 +114,9 @@ def _tier(value, steps):
 TIER_COLORS = {"bronze": "#cd7f32", "silver": "#c0c8d0", "gold": "#f2c94c"}
 
 
-def habits_svg(days, s, prof):
+def achievements_svg(days, s, prof, shipped):
     w, h = 900, 400
-    body = [prompt(w / 2, 60, "./habits.sh", "middle")]
+    body = [prompt(w / 2, 60, "./achievements.sh", "middle")]
     times = prof["times"]
     hours = [0] * 24
     for t in times:
@@ -168,38 +173,41 @@ def habits_svg(days, s, prof):
     ax0, aw = px0 + pw + 20, w - (px0 + pw + 20) - 20
     body.append(f'<rect x="{ax0}" y="{py0}" width="{aw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
     body.append(f'<text x="{ax0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">achievements.json</text>')
-    weekend = sum(d["contributionCount"] for d in days if dt.date.fromisoformat(d["date"]).weekday() >= 5)
-    total = sum(d["contributionCount"] for d in days) or 1
     tiers = [("bronze", "bronze"), ("silver", "silver"), ("gold", "gold")]
+    # (icon, name, what is measured, value, bronze/silver/gold thresholds, unit); value None = a fixed badge
     badges = [
         ("🔥", "On Fire", "longest streak", s["longest"], [3, 7, 30], "days"),
         ("⚡", "Power Day", "best single day", s["best"], [10, 30, 60], "contribs"),
-        ("📅", "Consistent", "active days / year", s["active"], [30, 100, 200], "days"),
-        ("🦉", "Night Owl", "commits 22:00–05:00", night, [5, 25, 100], "commits"),
+        ("🚀", "Shipper", "products live", shipped, [1, 3, 5], "sites"),
         ("🌐", "Polyglot", "languages used", len(prof["langs"]), [3, 6, 10], "langs"),
+        ("🦉", "Night Owl", "commits 22:00–05:00", night, [5, 25, 100], "commits"),
+        ("📅", "Consistent", "active days / year", s["active"], [30, 100, 200], "days"),
         ("🏗️", "Builder", "public repos", prof["repos"], [3, 10, 25], "repos"),
-        ("🎮", "Weekend Warrior", "weekend share", round(100 * weekend / total), [15, 25, 40], "%"),
-        ("⭐", "Starstruck", "stars earned", prof["stars"], [1, 10, 50], "stars"),
+        ("🏔️", "UB Builder", "shipping from Ulaanbaatar", None, [], ""),
     ]
     bw, bh = (aw - 36) / 2, 60
     for i, (icon, name, desc, val, ths, unit) in enumerate(badges):
         bx = ax0 + 12 + (i % 2) * (bw + 12)
         by = py0 + 30 + (i // 2) * (bh + 7)
-        got, nxt = _tier(val, list(zip(ths, [t[0] for t in tiers])))
-        col = TIER_COLORS.get(got, BORDER)
+        if val is None:
+            got, nxt, col = "home", None, GOLD
+        else:
+            got, nxt = _tier(val, list(zip(ths, [t[0] for t in tiers])))
+            col = TIER_COLORS.get(got, BORDER)
         op = "1" if got else "0.45"
         prog = 1.0 if nxt is None else val / nxt
+        detail = desc if val is None else f"{desc}: {val} {unit}"
         body.append(
             f'<g opacity="{op}"><rect x="{bx}" y="{by}" width="{bw}" height="{bh}" rx="6" fill="{BG}" stroke="{col}"/>'
             f'<text x="{bx + 22}" y="{by + 38}" font-size="24" text-anchor="middle">{icon}</text>'
             f'<text x="{bx + 44}" y="{by + 20}" fill="{TEXT}" font-size="12" font-weight="700">{escape(name)}'
             f'<tspan fill="{col}" font-size="9" font-weight="400" dx="6">{(got or "locked").upper()}</tspan></text>'
-            f'<text x="{bx + 44}" y="{by + 35}" fill="{MUTED}" font-size="9.5">{escape(desc)}: {val} {unit}</text>'
+            f'<text x="{bx + 44}" y="{by + 35}" fill="{MUTED}" font-size="9.5">{escape(detail)}</text>'
             f'<rect x="{bx + 44}" y="{by + 44}" width="{bw - 58}" height="4" rx="2" fill="#21262d"/>'
             f'<rect x="{bx + 44}" y="{by + 44}" width="{(bw - 58) * min(1, prog):.1f}" height="4" rx="2" '
             f'fill="{col if got else MUTED}"/></g>'
         )
-    return window(w, h, f"{USER.lower()} — habits.sh", "".join(body))
+    return window(w, h, f"{USER.lower()} — achievements.sh", "".join(body))
 
 
 # ---------------------------------------------------------------- neofetch
@@ -222,9 +230,9 @@ def _soyombo(x0, y0, height, col):
 
 
 def neofetch_svg(total, s, prof):
-    w, h = 900, 370
+    w, h = 900, 390
     body = [prompt(w / 2, 60, "neofetch", "middle")]
-    body.append(_soyombo(80, 92, 240, "#f2c94c"))
+    body.append(_soyombo(80, 92, 260, GOLD))
     now = dt.datetime.now(dt.timezone.utc)
     months = (now.year - prof["created"].year) * 12 + now.month - prof["created"].month
     uptime = f"{months // 12} years, {months % 12} months" if months >= 12 else f"{months} months"
@@ -239,6 +247,7 @@ def neofetch_svg(total, s, prof):
         ("Also", "Python · Unity · C#"),
         ("Commits", f"{total:,} in the last year"),
         ("Streak", f"{s['current']} current / {s['longest']} best"),
+        ("Status", "shipping products"),
     ]
     x0, y0 = 300, 96
     title = f"{USER.lower()}@github"
@@ -429,76 +438,23 @@ def ub_svg(weather):
     return window(w, h, f"{USER.lower()} — ub.sh", "".join(body))
 
 
-# ---------------------------------------------------------------- Pac-Man
+# ---------------------------------------------------------------- projects (live screenshots)
 
-def pacman_svg(weeks):
-    cell, gap = 13, 3
-    step = cell + gap
-    left, top = 24, 70
-    w = left * 2 + len(weeks) * step
-    h = top + 7 * step + 30
-    body = [prompt(w / 2, 50, "./pacman.sh --eat contributions", "middle")]
-    # serpentine path: down the first week, up the next, ...
-    order = []
-    for wi in range(len(weeks)):
-        rng = range(7) if wi % 2 == 0 else range(6, -1, -1)
-        order += [(wi, r) for r in rng]
-    per = 0.06
-    T = len(order) * per + 2.0
-    counts = {}
-    for wi, week in enumerate(weeks):
-        for d in week["contributionDays"]:
-            counts[(wi, (dt.date.fromisoformat(d["date"]).weekday() + 1) % 7)] = d["contributionCount"]
-    mx = max(counts.values() or [1]) or 1
-    center = lambda wi, r: (left + wi * step + cell / 2, top + r * step + cell / 2)
-    for i, (wi, r) in enumerate(order):
-        x, y = center(wi, r)
-        n = counts.get((wi, r), 0)
-        if n:
-            lvl = min(4, 1 + int(3.999 * n / mx))
-            k = (i * per) / T
-            body.append(
-                f'<rect x="{x - cell / 2}" y="{y - cell / 2}" width="{cell}" height="{cell}" rx="2.5" fill="{LEVELS[lvl]}">'
-                f'<animate attributeName="opacity" dur="{T:.2f}s" repeatCount="indefinite" '
-                f'keyTimes="0;{k:.4f};{min(k + 0.001, 0.97):.4f};0.97;1" values="1;1;0;0;1"/></rect>'
-            )
-        else:
-            body.append(f'<circle cx="{x}" cy="{y}" r="1.6" fill="#30363d"/>')
-    pts = [center(wi, r) for wi, r in order]
-    path = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-    mouth = (
-        '<path fill="#f2c94c"><animate attributeName="d" dur="0.25s" repeatCount="indefinite" '
-        'values="M0,0 L7,-4 A8,8 0 1,0 7,4 Z;M0,0 L8,-0.5 A8,8 0 1,0 8,0.5 Z;M0,0 L7,-4 A8,8 0 1,0 7,4 Z"/></path>'
-    )
-    move = f'<animateMotion dur="{T:.2f}s" repeatCount="indefinite" rotate="auto" path="{path}" ' \
-           f'keyPoints="0;1;1" keyTimes="0;{(T - 2) / T:.4f};1" calcMode="linear"/>'
-    body.append(f"<g>{mouth}{move}</g>")
-    for gi, (gc, lag) in enumerate((("#f85149", 0.9), ("#bc8cff", 1.6))):
-        ghost = (
-            f'<path d="M-7,7 L-7,-1 A7,7 0 0,1 7,-1 L7,7 L4.5,4.5 L2,7 L0,4.5 L-2,7 L-4.5,4.5 Z" fill="{gc}"/>'
-            f'<circle cx="-2.5" cy="-1" r="2" fill="#fff"/><circle cx="2.5" cy="-1" r="2" fill="#fff"/>'
-            f'<circle cx="-2" cy="-1" r="1" fill="#010409"/><circle cx="3" cy="-1" r="1" fill="#010409"/>'
-        )
-        k0 = lag / T
-        body.append(
-            f'<g>{ghost}<animateMotion dur="{T:.2f}s" repeatCount="indefinite" path="{path}" '
-            f'keyPoints="0;0;1;1" keyTimes="0;{k0:.4f};{min(0.999, (T - 2) / T + k0):.4f};1" calcMode="linear"/></g>'
-        )
-    return window(w, h, f"{USER.lower()} — pacman.sh", "".join(body))
-
-
-# ---------------------------------------------------------------- live project screenshots
-
-# (screenshot name, host, description, stack, own repo?) — team projects get a tag
+# screenshots come from scripts/screenshots.sh; `own` = False marks a team repo owned by someone else
 PROJECTS = [
-    ("100ail", "100ail.vercel.app",
-     "BarilgaHUB — construction materials marketplace", "NestJS · Next.js · PostgreSQL", True),
-    ("sporthub", "sporthub-eight.vercel.app",
-     "SportHub Mongolia — one membership for every sport", "NestJS · React · PostgreSQL · Railway", True),
-    ("gymhub", "gymhubmn.vercel.app",
-     "GymHub — one membership for 30+ fitness clubs", "Next.js · TypeScript", False),
-    ("sparkxp", "spark-xp-web.vercel.app",
-     "SparkXP — gamified English learning app", "React Native · NestJS · PostgreSQL", False),
+    {"key": "sporthub", "host": "sporthub-eight.vercel.app", "name": "SportHub Mongolia",
+     "tagline": "One membership. Every sport.", "own": True, "featured": True,
+     "tree": [("backend", "NestJS · PostgreSQL"), ("web", "React · Vite · TypeScript"),
+              ("admin", "Next.js"), ("deploy", "Railway · Vercel")]},
+    {"key": "100ail", "host": "100ail.vercel.app", "name": "BarilgaHUB",
+     "tagline": "Construction materials marketplace", "own": True,
+     "stack": ["NestJS", "Next.js", "PostgreSQL"]},
+    {"key": "gymhub", "host": "gymhubmn.vercel.app", "name": "GymHub",
+     "tagline": "One membership for 30+ fitness clubs", "own": False,
+     "stack": ["Next.js", "TypeScript"]},
+    {"key": "sparkxp", "host": "spark-xp-web.vercel.app", "name": "SparkXP",
+     "tagline": "Gamified English learning app", "own": False,
+     "stack": ["React Native", "NestJS", "PostgreSQL"]},
 ]
 
 
@@ -509,45 +465,100 @@ def _data_uri(path, mime):
         return f"data:{mime};base64,{base64.b64encode(f.read()).decode()}"
 
 
+def _live(x, y, label="live"):
+    return (
+        f'<circle cx="{x}" cy="{y - 4}" r="3.5" fill="{GREEN}"><animate attributeName="opacity" '
+        f'values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></circle>'
+        f'<text x="{x + 9}" y="{y}" font-size="11" fill="{GREEN}">{escape(label)}</text>'
+    )
+
+
+def _browser(x0, y0, bw, host, shot, cid):
+    """A mini browser window around a 16:10 screenshot; returns (svg, height)."""
+    iw = bw - 20
+    ih = iw * 500 / 800
+    out = [
+        f'<rect x="{x0}" y="{y0}" width="{bw}" height="{ih + 42}" rx="8" fill="{BG}" stroke="{BORDER}"/>',
+        "".join(f'<circle cx="{x0 + 16 + i * 12}" cy="{y0 + 15}" r="4" fill="{c}"/>'
+                for i, c in enumerate(["#ff5f56", "#ffbd2e", "#27c93f"])),
+        f'<rect x="{x0 + 54}" y="{y0 + 6}" width="{bw - 64}" height="18" rx="9" fill="{PANEL}" stroke="{BORDER}"/>',
+        f'<text x="{x0 + 66}" y="{y0 + 19}" font-size="10" fill="{MUTED}"><tspan fill="{GREEN}">https://</tspan>{escape(host)}</text>',
+        f'<clipPath id="{cid}"><rect x="{x0 + 10}" y="{y0 + 32}" width="{iw}" height="{ih}" rx="4"/></clipPath>',
+    ]
+    if os.path.exists(shot):
+        out.append(
+            f'<image x="{x0 + 10}" y="{y0 + 32}" width="{iw}" height="{ih}" clip-path="url(#{cid})" '
+            f'preserveAspectRatio="xMidYMin slice" href="{_data_uri(shot, "image/jpeg")}"/>'
+        )
+    out.append(f'<rect x="{x0 + 10}" y="{y0 + 32}" width="{iw}" height="{ih}" rx="4" fill="none" stroke="{BORDER}"/>')
+    return "".join(out), ih + 42
+
+
+def mission_svg(shots_dir):
+    p = next(p for p in PROJECTS if p.get("featured"))
+    w = 900
+    body = [prompt(w / 2, 60, "./current-mission.sh", "middle")]
+    shot, bh = _browser(20, 84, 500, p["host"], os.path.join(shots_dir, f"{p['key']}.jpg"), "mission")
+    body.append(shot)
+    x = 548
+    body.append(
+        f'<text x="{x}" y="108" fill="{GOLD}" font-size="11" font-weight="700" letter-spacing="2">MAIN PROJECT</text>'
+        f'<text x="{x}" y="142" fill="{TEXT}" font-size="24" font-weight="700">{escape(p["name"])}</text>'
+        f'<text x="{x}" y="170" fill="{TEXT}" font-size="15">{escape(p["tagline"])}</text>'
+        + _live(x + 4, 200, f"LIVE · {p['host']}")
+        + f'<text x="{x}" y="240" fill="{MUTED}" font-size="12">~/sporthub</text>'
+    )
+    for i, (k, v) in enumerate(p["tree"]):
+        branch = "└──" if i == len(p["tree"]) - 1 else "├──"
+        body.append(
+            f'<text x="{x}" y="{266 + i * 24}" font-size="13" xml:space="preserve">'
+            f'<tspan fill="{BORDER}">{branch} </tspan><tspan fill="{GREEN}">{k:<8}</tspan>'
+            f'<tspan fill="{TEXT}">{escape(v)}</tspan></text>'
+        )
+    h = 84 + bh + 22
+    return window(w, h, f"{USER.lower()} — current-mission.sh", "".join(body))
+
+
 def projects_svg(shots_dir):
-    pw, ch, gap = 420, 320, 20
-    rows = (len(PROJECTS) + 1) // 2
-    w, h = 900, 80 + rows * ch + (rows - 1) * gap + 20
-    body = [prompt(w / 2, 60, "open ./projects --live", "middle")]
-    for i, (name, host, desc, stack, own) in enumerate(PROJECTS):
-        x0, y0 = 20 + (i % 2) * (pw + gap), 80 + (i // 2) * (ch + gap)
-        ih = pw * 500 / 800 * 0.9
-        iw = pw - 20
-        body.append(f'<rect x="{x0}" y="{y0}" width="{pw}" height="{ch}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
-        # browser chrome
+    rest = [p for p in PROJECTS if not p.get("featured")]
+    w, row, gap = 900, 248, 16
+    h = 80 + len(rest) * (row + gap) + 4
+    body = [prompt(w / 2, 60, "ls ~/projects --live", "middle")]
+    for i, p in enumerate(rest):
+        y0 = 80 + i * (row + gap)
+        body.append(f'<rect x="20" y="{y0}" width="{w - 40}" height="{row}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+        shot, _ = _browser(32, y0 + 12, 340, p["host"], os.path.join(shots_dir, f"{p['key']}.jpg"), f"shot{i}")
+        body.append(shot)
+        x = 404
+        tag, tcol = ("own project", MUTED) if p["own"] else ("team project", GOLD)
         body.append(
-            f'<circle cx="{x0 + 16}" cy="{y0 + 16}" r="4" fill="#ff5f56"/><circle cx="{x0 + 28}" cy="{y0 + 16}" r="4" fill="#ffbd2e"/>'
-            f'<circle cx="{x0 + 40}" cy="{y0 + 16}" r="4" fill="#27c93f"/>'
-            f'<rect x="{x0 + 54}" y="{y0 + 7}" width="{pw - 64}" height="18" rx="9" fill="{BG}" stroke="{BORDER}"/>'
-            f'<text x="{x0 + 66}" y="{y0 + 20}" font-size="10" fill="{MUTED}"><tspan fill="{GREEN}">🔒 https://</tspan>{escape(host)}</text>'
+            f'<text x="{x}" y="{y0 + 48}" fill="{TEXT}" font-size="22" font-weight="700">{escape(p["name"])}</text>'
+            f'<text x="{w - 40}" y="{y0 + 46}" fill="{tcol}" font-size="11" text-anchor="end">● {tag}</text>'
+            f'<text x="{x}" y="{y0 + 78}" fill="{MUTED}" font-size="14">{escape(p["tagline"])}</text>'
+            + _live(x + 4, y0 + 112, p["host"])
         )
-        shot = os.path.join(shots_dir, f"{name}.jpg")
-        ix, iy = x0 + 10, y0 + 32
-        body.append(f'<clipPath id="shot{i}"><rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" rx="4"/></clipPath>')
-        if os.path.exists(shot):
+        cx = x
+        for t in p["stack"]:
+            tw = len(t) * 7.4 + 20
             body.append(
-                f'<image x="{ix}" y="{iy}" width="{iw}" height="{iw * 500 / 800}" clip-path="url(#shot{i})" '
-                f'preserveAspectRatio="xMidYMin slice" href="{_data_uri(shot, "image/jpeg")}"/>'
+                f'<rect x="{cx}" y="{y0 + 140}" width="{tw:.0f}" height="24" rx="12" fill="{BG}" stroke="{BORDER}"/>'
+                f'<text x="{cx + tw / 2:.0f}" y="{y0 + 156}" fill="{GREEN}" font-size="12" text-anchor="middle">{escape(t)}</text>'
             )
-        else:
-            body.append(f'<rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" fill="{BG}"/>')
-        body.append(f'<rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" rx="4" fill="none" stroke="{BORDER}"/>')
-        ty = iy + ih + 22
-        body.append(
-            f'<text x="{ix}" y="{ty}" font-size="12" font-weight="700" fill="{TEXT}">{escape(desc)}</text>'
-            f'<text x="{ix}" y="{ty + 18}" font-size="11" fill="{GREEN}">{escape(stack)}</text>'
-            f'<circle cx="{x0 + pw - 46}" cy="{y0 + 16}" r="3.5" fill="{GREEN}"><animate attributeName="opacity" '
-            f'values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></circle>'
-            f'<text x="{x0 + pw - 18}" y="{y0 + 20}" font-size="10" fill="{GREEN}" text-anchor="end">live</text>'
-        )
-        if not own:
-            body.append(
-                f'<text x="{x0 + pw - 10}" y="{ty + 18}" font-size="10" fill="#bc8cff" text-anchor="end">● team project</text>'
-            )
+            cx += tw + 8
     return window(w, h, f"{USER.lower()} — projects", "".join(body))
 
+
+# ---------------------------------------------------------------- footer
+
+def footer_svg():
+    from generate import bogd_khan
+
+    w, h = 900, 200
+    body = [
+        bogd_khan(w, h),
+        f'<text x="28" y="66" font-size="14" font-weight="700"><tspan fill="{GREEN}">{USER.lower()}@github</tspan>'
+        f'<tspan fill="{MUTED}"> ~ $ </tspan><tspan fill="{TEXT}">echo "still building..."</tspan></text>',
+        f'<text x="28" y="94" font-size="14" fill="{TEXT}">still building useful things from Ulaanbaatar.</text>',
+        prompt(28, 130, ""),
+    ]
+    return window(w, h, f"{USER.lower()} — zsh", "".join(body))

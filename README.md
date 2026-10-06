@@ -1,60 +1,95 @@
+<!-- BATSAIKHANN OS — every card in assets/ is regenerated hourly by .github/workflows/update.yml (scripts/generate.py) -->
+
 <div align="center">
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/header.svg"><img src="assets/header.svg" alt="Batsaikhan" width="100%"/></picture>
+<!-- HERO -->
 
-<a href="https://github.com/Batsaikhann?tab=repositories"><img src="https://img.shields.io/badge/repos-browse-3fb950?style=flat-square&labelColor=0d1117&logo=github" alt="repos"/></a>
-<a href="https://github.com/Batsaikhann?tab=followers"><img src="https://img.shields.io/github/followers/Batsaikhann?style=flat-square&label=followers&color=3fb950&labelColor=0d1117" alt="followers"/></a>
+#### `/boot`
 
-<br/><br/>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/hero.svg"><img src="assets/hero.svg" alt="BATSAIKHANN — full-stack developer from Ulaanbaatar, Mongolia" width="100%"/></picture>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/contributions.svg"><img src="assets/contributions.svg" alt="contributions" width="100%"/></picture>
+<sub><a href="#boot"><code>/boot</code></a> · <a href="#whoami"><code>/whoami</code></a> · <a href="#current-mission"><code>/current-mission</code></a> · <a href="#activity"><code>/activity</code></a> · <a href="#stack"><code>/stack</code></a> · <a href="#achievements"><code>/achievements</code></a> · <a href="#projects"><code>/projects</code></a> · <a href="#network"><code>/network</code></a></sub>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/city.svg"><img src="assets/city.svg" alt="3D contribution city" width="100%"/></picture>
+<!-- WHOAMI -->
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/whoami.svg"><img src="assets/whoami.svg" alt="whoami" width="100%"/></picture>
+#### `/whoami`
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/activity.svg"><img src="assets/activity.svg" alt="recent activity" width="100%"/></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/whoami.svg"><img src="assets/whoami.svg" alt="whoami: ASCII portrait and identity" width="100%"/></picture>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/habits.svg"><img src="assets/habits.svg" alt="commit clock and achievements" width="100%"/></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/neofetch.svg"><img src="assets/neofetch.svg" alt="neofetch: Soyombo and system info" width="100%"/></picture>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/neofetch.svg"><img src="assets/neofetch.svg" alt="neofetch" width="100%"/></picture>
+<!-- PROJECTS: current mission -->
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/ub.svg"><img src="assets/ub.svg" alt="Ulaanbaatar weather and proverb of the day" width="100%"/></picture>
+#### `/current-mission`
 
-<br/>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/mission.svg"><img src="assets/mission.svg" alt="SportHub Mongolia — one membership, every sport" width="100%"/></picture>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/projects.svg"><img src="assets/projects.svg" alt="live projects: 100ail, SportHub, GymHub and SparkXP" width="100%"/></picture>
+<a href="https://sporthub-eight.vercel.app"><b>▶ Live demo</b></a> &nbsp;·&nbsp; <sub>source is private</sub>
 
-<a href="https://100ail.vercel.app"><b>100ail</b></a> · <a href="https://github.com/Batsaikhann/100ail">code</a>
-&nbsp;│&nbsp;
-<a href="https://sporthub-eight.vercel.app"><b>SportHub</b></a>
+<!-- ACTIVITY -->
+
+#### `/activity`
+
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/city.svg"><img src="assets/city.svg" alt="Code City / Ulaanbaatar: one tower per day of contributions" width="100%"/></picture>
+
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/shipping.svg"><img src="assets/shipping.svg" alt="git log --shipping: latest commits and languages" width="100%"/></picture>
+
+<!-- STACK -->
+
+#### `/stack`
+
+</div>
+
+```console
+batsaikhann@github ~ $ tree ~/stack
+~/stack
+├── frontend
+│   ├── Next.js · React
+│   └── TypeScript · Tailwind CSS
+├── backend
+│   └── NestJS · Node.js
+├── database
+│   └── PostgreSQL · Supabase
+├── deploy
+│   └── Vercel · Railway
+└── other
+    └── Python · Unity · C#
+```
+
+<div align="center">
+
+<picture><source media="(prefers-color-scheme: light)" srcset="https://skillicons.dev/icons?i=ts,nextjs,react,tailwind,nestjs,nodejs,postgres,supabase,vercel,python,unity,cs&perline=12&theme=light"><img src="https://skillicons.dev/icons?i=ts,nextjs,react,tailwind,nestjs,nodejs,postgres,supabase,vercel,python,unity,cs&perline=12&theme=dark" alt="Next.js, React, NestJS, PostgreSQL and more" width="100%"/></picture>
+
+<!-- ACHIEVEMENTS -->
+
+#### `/achievements`
+
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/achievements.svg"><img src="assets/achievements.svg" alt="achievements and commit clock" width="100%"/></picture>
+
+<!-- PROJECTS: live showcase -->
+
+#### `/projects`
+
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/projects.svg"><img src="assets/projects.svg" alt="live projects: BarilgaHUB, GymHub, SparkXP" width="100%"/></picture>
+
+<a href="https://100ail.vercel.app"><b>BarilgaHUB</b></a> · <a href="https://github.com/Batsaikhann/100ail">source</a>
 &nbsp;│&nbsp;
 <a href="https://gymhubmn.vercel.app"><b>GymHub</b></a> <sub>team</sub>
 &nbsp;│&nbsp;
-<a href="https://spark-xp-web.vercel.app"><b>SparkXP</b></a> · <a href="https://github.com/usukh6ayar/SparkXP">code</a> <sub>team</sub>
-<br/>
-<a href="https://github.com/Batsaikhann/bikemap_ub"><b>bikemap_ub</b></a> <sub>bike map for Ulaanbaatar · Python</sub>
-&nbsp;│&nbsp;
-<a href="https://github.com/Batsaikhann/Unity-Endless-Game"><b>Unity-Endless-Game</b></a> <sub>endless runner · Unity · C#</sub>
+<a href="https://spark-xp-web.vercel.app"><b>SparkXP</b></a> · <a href="https://github.com/usukh6ayar/SparkXP">source</a> <sub>team</sub>
 
-<br/><br/>
+<sub>more: <a href="https://github.com/Batsaikhann/Unity-Endless-Game">Unity-Endless-Game</a> · <a href="https://github.com/Batsaikhann/bikemap_ub">bikemap_ub</a> · <a href="https://github.com/Batsaikhann?tab=repositories">all repositories</a></sub>
 
-```console
-batsaikhann@github ~ $ ./stack.sh
-```
+<!-- NETWORK -->
 
-<picture><source media="(prefers-color-scheme: light)" srcset="https://skillicons.dev/icons?i=ts,nextjs,react,nestjs,nodejs,python,postgres,supabase,vercel,unity,cs,git&theme=light"><img src="https://skillicons.dev/icons?i=ts,nextjs,react,nestjs,nodejs,python,postgres,supabase,vercel,unity,cs,git&theme=dark" alt="stack"/></picture>
+#### `/network`
 
-<br/><br/>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/ub.svg"><img src="assets/ub.svg" alt="Ulaanbaatar weather and proverb of the day" width="100%"/></picture>
 
-```console
-batsaikhann@github ~ $ ./snake.sh --eat contributions
-```
+<picture><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Batsaikhann/Batsaikhann/output/snake-light.svg"><img src="https://raw.githubusercontent.com/Batsaikhann/Batsaikhann/output/snake.svg" alt="snake eating the contribution graph" width="100%"/></picture>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Batsaikhann/Batsaikhann/output/snake-light.svg"><img src="https://raw.githubusercontent.com/Batsaikhann/Batsaikhann/output/snake.svg" alt="snake eating contributions" width="100%"/></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/footer.svg"><img src="assets/footer.svg" alt="still building useful things from Ulaanbaatar" width="100%"/></picture>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/pacman.svg"><img src="assets/pacman.svg" alt="pac-man eating contributions" width="100%"/></picture>
-
-<sub>every card on this page regenerates hourly via GitHub Actions · <code>scripts/generate.py</code></sub>
+<sub>cards regenerate hourly via GitHub Actions · <code>scripts/generate.py</code></sub>
 
 </div>

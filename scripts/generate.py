@@ -1,12 +1,11 @@
-"""Generate terminal-style SVG cards for the GitHub profile README.
+"""Generate the terminal-style SVG cards of the BATSAIKHANN OS profile README.
 
-Outputs:
-  assets/contributions.svg  - `./contributions.sh` heatmap of the last year
-  assets/whoami.svg         - `whoami` panel: ASCII portrait + stats + monthly bars
-  assets/header.svg         - block-letter name banner with a typing tagline
-  assets/activity.svg       - `git log` of recent commits + language breakdown
-  assets/city.svg, habits.svg, neofetch.svg, ub.svg, ... - see extras.py
-  assets/light/*.svg        - the same cards recoloured for GitHub's light theme
+Outputs (assets/):
+  hero.svg         `./welcome.sh` banner: name, typing tagline, Soyombo, Bogd Khan ridge
+  whoami.svg       ASCII portrait + identity
+  shipping.svg     `git log --shipping`: latest real commits + language breakdown
+  neofetch.svg, mission.svg, city.svg, achievements.svg, projects.svg, ub.svg, footer.svg - see extras.py
+  light/*.svg      the same cards recoloured for GitHub's light theme
 
 Requires env GH_TOKEN (or GITHUB_TOKEN) and optionally GH_USER.
 """
@@ -31,6 +30,7 @@ BORDER = "#30363d"
 TEXT = "#c9d1d9"
 MUTED = "#8b949e"
 GREEN = "#3fb950"
+GOLD = "#f2c94c"
 LEVELS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"]
 # light-theme counterparts (GitHub light palette); every card is also written to assets/light/
 LIGHT = {
@@ -84,7 +84,7 @@ def fetch():
 
 def fetch_repos():
     q = """query($login:String!){user(login:$login){repositories(first:30,ownerAffiliations:OWNER,
-      privacy:PUBLIC,isFork:false,orderBy:{field:PUSHED_AT,direction:DESC}){nodes{name
+      privacy:PUBLIC,isFork:false,orderBy:{field:PUSHED_AT,direction:DESC}){nodes{name pushedAt
         languages(first:10,orderBy:{field:SIZE,direction:DESC}){edges{size node{name color}}}
         defaultBranchRef{target{... on Commit{history(first:15){nodes{abbreviatedOid messageHeadline
           committedDate additions deletions author{user{login}}}}}}}}}}}"""
@@ -152,48 +152,6 @@ def prompt(x, y, cmd, anchor="start"):
     )
 
 
-def contributions_svg(total, weeks):
-    cell, gap = 13, 3
-    left, top = 46, 104
-    w = left + len(weeks) * (cell + gap) + 24
-    h = top + 7 * (cell + gap) + 46
-    body = [prompt(w / 2, 60, "./contributions.sh", "middle")]
-    last_month = None
-    for wi, week in enumerate(weeks):
-        x = left + wi * (cell + gap)
-        first = dt.date.fromisoformat(week["contributionDays"][0]["date"])
-        if first.month != last_month and first.day <= 7 and wi < len(weeks) - 2:
-            body.append(f'<text x="{x}" y="{top - 8}" fill="{MUTED}" font-size="11">{first:%b}</text>')
-            last_month = first.month
-        for d in week["contributionDays"]:
-            dd = dt.date.fromisoformat(d["date"])
-            row = (dd.weekday() + 1) % 7  # Sunday first
-            lvl = ["NONE", "FIRST_QUARTILE", "SECOND_QUARTILE", "THIRD_QUARTILE", "FOURTH_QUARTILE"].index(
-                d["contributionLevel"]
-            )
-            body.append(
-                f'<rect x="{x}" y="{top + row * (cell + gap)}" width="{cell}" height="{cell}" rx="2.5" '
-                f'fill="{LEVELS[lvl]}" stroke="#ffffff0d">'
-                f'<title>{d["contributionCount"]} on {dd:%b %-d, %Y}</title></rect>'
-            )
-    for r, name in ((1, "Mon"), (3, "Wed"), (5, "Fri")):
-        body.append(
-            f'<text x="{left - 8}" y="{top + r * (cell + gap) + 10}" fill="{MUTED}" font-size="11" '
-            f'text-anchor="end">{name}</text>'
-        )
-    ly = top + 7 * (cell + gap) + 24
-    body.append(
-        f'<text x="{left}" y="{ly}" fill="{TEXT}" font-size="12"><tspan font-weight="700">{total:,}</tspan>'
-        f" contributions in the last year</text>"
-    )
-    lx = w - 24 - 5 * (cell + 3) - 40
-    body.append(f'<text x="{lx - 8}" y="{ly}" fill="{MUTED}" font-size="11" text-anchor="end">Less</text>')
-    for i, c in enumerate(LEVELS):
-        body.append(f'<rect x="{lx + i * (cell + 3)}" y="{ly - 11}" width="{cell}" height="{cell}" rx="2.5" fill="{c}"/>')
-    body.append(f'<text x="{lx + 5 * (cell + 3) + 4}" y="{ly}" fill="{MUTED}" font-size="11">More</text>')
-    return window(w, h, f"{USER.lower()} — contributions.sh", "".join(body))
-
-
 PORTRAIT_SRC = os.path.join(OUT, "portrait-source.png")
 
 
@@ -216,7 +174,7 @@ def ascii_portrait(avatar_url, cols=120, rows=72):
     ]
 
 
-def whoami_svg(avatar_url, total, s):
+def whoami_svg(avatar_url, last_push=None):
     w, h = 900, 470
     body = [prompt(w / 2, 60, "whoami", "middle")]
     # portrait panel
@@ -247,55 +205,33 @@ def whoami_svg(avatar_url, total, s):
             f'<text x="{px0 + pw / 2}" y="{py0 + 27 + i * lh}" font-size="5.3" '
             f'text-anchor="middle" xml:space="preserve">{spans}</text>'
         )
-    # stats panel
+    # identity panel
     sx0, sy0, sw = 440, 80, 440
     body.append(f'<rect x="{sx0}" y="{sy0}" width="{sw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
-    body.append(f'<text x="{sx0 + 12}" y="{sy0 + 18}" fill="{MUTED}" font-size="10">stats.json</text>')
-    tiles = [
-        ("current streak", f"{s['current']}", "days", True),
-        ("longest streak", f"{s['longest']}", "days", False),
-        ("contributions", f"{total:,}", "in the last year", True),
-        ("active days", f"{s['active']}", f"/ {s['total_days']}", False),
-        ("best day", f"{s['best']}", s["best_date"], False),
-        ("avg / active day", f"{s['avg']:.1f}", "contributions", False),
+    body.append(f'<text x="{sx0 + 12}" y="{sy0 + 18}" fill="{MUTED}" font-size="10">identity.yml</text>')
+    rows = [
+        ("Name", "Batsaikhann", TEXT),
+        ("Location", "Ulaanbaatar, Mongolia 🇲🇳", TEXT),
+        ("Role", "Full-stack Developer", TEXT),
+        ("Focus", "Web · Mobile · Systems", TEXT),
+        ("Currently", "SportHub Mongolia", GOLD),
     ]
-    tw, th = 200, 54
-    for i, (label, val, unit, hi) in enumerate(tiles):
-        tx = sx0 + 14 + (i % 2) * (tw + 12)
-        ty = sy0 + 30 + (i // 2) * (th + 8)
+    if last_push:
+        rows.append(("Last push", f"{last_push[0]} · {rel_time(last_push[1])}", TEXT))
+    for i, (k, v, col) in enumerate(rows):
+        y = sy0 + 62 + i * 40
         body.append(
-            f'<rect x="{tx}" y="{ty}" width="{tw}" height="{th}" rx="6" fill="{BG}" stroke="{BORDER}"/>'
-            f'<text x="{tx + 10}" y="{ty + 16}" fill="{MUTED}" font-size="10">$ {escape(label)}</text>'
-            f'<text x="{tx + 10}" y="{ty + 42}" font-size="22" font-weight="700" fill="{GREEN if hi else TEXT}">'
-            f'{escape(val)}<tspan fill="{MUTED}" font-size="10" font-weight="400" dx="6">{escape(unit)}</tspan></text>'
+            f'<text x="{sx0 + 24}" y="{y}" font-size="15" xml:space="preserve">'
+            f'<tspan fill="{GREEN}" font-weight="700">{k:<10}</tspan><tspan fill="{col}">{escape(v)}</tspan></text>'
         )
-    # monthly bars
-    by = sy0 + 30 + 3 * (th + 8) + 4
-    bh_area = ph - (by - sy0) - 30
-    body.append(f'<text x="{sx0 + 14}" y="{by + 10}" fill="{MUTED}" font-size="10">$ contributions / month</text>')
-    vals = list(s["months"].values())
-    mx = max(vals) or 1
-    bw, bgap = 26, 9
-    bx0 = sx0 + 14 + (sw - 28 - 12 * bw - 11 * bgap) / 2
-    base = by + bh_area + 4
-    for i, ((y, m), v) in enumerate(s["months"].items()):
-        bh = max(2, (bh_area - 34) * v / mx)
-        x = bx0 + i * (bw + bgap)
-        color = GREEN if v == mx else "#238636"
-        body.append(
-            f'<rect x="{x}" y="{base - bh}" width="{bw}" height="{bh}" rx="2" fill="{color}">'
-            f'<title>{v} in {dt.date(y, m, 1):%b %Y}</title>'
-            f'<animate attributeName="height" from="0" to="{bh}" begin="{0.5 + i * 0.05:.2f}s" dur="0.5s" fill="freeze"/>'
-            f'<animate attributeName="y" from="{base}" to="{base - bh}" begin="{0.5 + i * 0.05:.2f}s" dur="0.5s" fill="freeze"/>'
-            f"</rect>"
-            f'<text x="{x + bw / 2}" y="{base + 14}" fill="{MUTED}" font-size="9" text-anchor="middle">'
-            f"{dt.date(y, m, 1):%b}</text>"
-        )
-        if v == mx:
-            body.append(
-                f'<text x="{x + bw / 2}" y="{base - bh - 5}" fill="{GREEN}" font-size="10" '
-                f'text-anchor="middle">{v}</text>'
-            )
+    y = sy0 + 62 + len(rows) * 40
+    body.append(
+        f'<text x="{sx0 + 24}" y="{y}" font-size="15" xml:space="preserve">'
+        f'<tspan fill="{GREEN}" font-weight="700">{"Status":<10}</tspan><tspan fill="{TEXT}">🚀 shipping</tspan>'
+        f'<tspan fill="{GREEN}">.<animate attributeName="opacity" values="0;1;1;0" dur="1.8s" repeatCount="indefinite"/></tspan>'
+        f'<tspan fill="{GREEN}">.<animate attributeName="opacity" values="0;0;1;0" dur="1.8s" repeatCount="indefinite"/></tspan>'
+        f'<tspan fill="{GREEN}">.<animate attributeName="opacity" values="0;0;0;1;0" dur="1.8s" repeatCount="indefinite"/></tspan></text>'
+    )
     return window(w, h, f"{USER.lower()} — whoami", "".join(body))
 
 
@@ -311,12 +247,7 @@ GLYPHS = {
     "T": ["########", "   ##   ", "   ##   ", "   ##   ", "   ##   "],
 }
 
-TAGLINES = [
-    "Full-stack developer",
-    "Building marketplaces with NestJS + Next.js",
-    "Shipping web apps, maps & games",
-    "Always learning, always shipping",
-]
+TAGLINES = ["> build.", "> ship.", "> iterate.", "> repeat."]
 
 
 def matrix_rain(w, h, cols=46, seed=8855):
@@ -326,7 +257,7 @@ def matrix_rain(w, h, cols=46, seed=8855):
     rnd = random.Random(seed)  # fixed seed keeps the file stable between runs
     glyphs = "АБВГДЕЁЖЗИЙКЛМНОӨПРСТУҮФХЦЧШЩЪЫЬЭЮЯ0123456789{}<>/=;$#"
     fs = 12
-    out = [f'<clipPath id="rain"><rect x="1" y="1" width="{w - 2}" height="{h - 2}" rx="12"/></clipPath><g clip-path="url(#rain)" font-size="{fs}">']
+    out = [f'<clipPath id="rain"><rect x="1" y="33" width="{w - 2}" height="{h - 34}" rx="12"/></clipPath><g clip-path="url(#rain)" font-size="{fs}">']
     for c in range(cols):
         x = 10 + c * (w - 20) / cols
         n = rnd.randint(8, 16)
@@ -339,39 +270,49 @@ def matrix_rain(w, h, cols=46, seed=8855):
         )
         span = n * (fs + 2)
         out.append(
-            f'<text opacity="0.45">{chars}<animateTransform attributeName="transform" type="translate" '
+            f'<text opacity="0.3">{chars}<animateTransform attributeName="transform" type="translate" '
             f'from="0 {-span}" to="0 {h}" dur="{dur:.2f}s" begin="{delay:.2f}s" repeatCount="indefinite"/></text>'
         )
     out.append("</g>")
     return "".join(out)
 
 
-def _header_sides(w, h):
-    """Name in traditional Mongolian script on the left, Soyombo on the right (both gold)."""
+def bogd_khan(w, h):
+    """Bogd Khan Uul, the ridge south of Ulaanbaatar, as a quiet silhouette along the bottom edge."""
+    import math
+
+    pts = []
+    for x in range(0, w + 1, 6):
+        y = h - 30 - 14 * math.sin(x / 75) - 7 * math.sin(x / 21 + 1.3) - 30 * math.exp(-(((x - 600) / 110) ** 2))
+        pts.append(f"{x},{y:.1f}")
+    ridge = " L".join(pts)
+    return (
+        f'<clipPath id="ridge"><rect x="1" y="33" width="{w - 2}" height="{h - 34}" rx="12"/></clipPath>'
+        f'<g clip-path="url(#ridge)"><path d="M0,{h} L{ridge} L{w},{h} Z" fill="{PANEL}"/>'
+        f'<path d="M{ridge}" fill="none" stroke="{GOLD}" stroke-opacity="0.35" stroke-width="1.2"/></g>'
+    )
+
+
+def _mongol_name(x, y, height):
+    """The name in traditional Mongolian script (pre-rendered PNG, embedded)."""
     import base64
 
+    path = os.path.join(OUT, "mongol-name.png")
+    if not os.path.exists(path):
+        return ""
+    img = Image.open(path)
+    iw = img.width * height / img.height
+    with open(path, "rb") as f:
+        uri = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+    return f'<image x="{x - iw / 2:.1f}" y="{y}" width="{iw:.1f}" height="{height}" href="{uri}"/>'
+
+
+def hero_svg(name="BATSAIKHANN"):
     from extras import _soyombo
 
-    out = []
-    path = os.path.join(OUT, "mongol-name.png")
-    if os.path.exists(path):
-        img = Image.open(path)
-        ih = h - 40
-        iw = img.width * ih / img.height
-        with open(path, "rb") as f:
-            uri = "data:image/png;base64," + base64.b64encode(f.read()).decode()
-        out.append(f'<image x="{34 - iw / 2:.1f}" y="20" width="{iw:.1f}" height="{ih}" href="{uri}"/>')
-    sh = 118
-    out.append(_soyombo(w - 40 - sh * 172 / 312 / 2, (h - sh) / 2, sh, "#f2c94c"))
-    return "".join(out)
-
-
-def header_svg(name="BATSAIKHAN"):
-    px, gap = 9.4, 0
+    w, h, px = 900, 340, 7.9
     cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
-    w = 900
-    gx0 = (w - cols * px) / 2
-    gy0 = 40
+    gx0, gy0 = (w - cols * px) / 2, 92
     shadow, front = [], []
     x = 0
     for c in name:
@@ -380,43 +321,57 @@ def header_svg(name="BATSAIKHAN"):
             for k, ch in enumerate(row):
                 if ch == "#":
                     cx, cy = gx0 + (x + k) * px, gy0 + r * px
-                    shadow.append(f'<rect x="{cx + 4}" y="{cy + 4}" width="{px}" height="{px}"/>')
-                    front.append(f'<rect x="{cx}" y="{cy}" width="{px + 0.5}" height="{px + 0.5}"/>')
+                    shadow.append(f'<rect x="{cx + 3.5:.1f}" y="{cy + 3.5:.1f}" width="{px}" height="{px}"/>')
+                    front.append(f'<rect x="{cx:.1f}" y="{cy:.1f}" width="{px + 0.5}" height="{px + 0.5}"/>')
         x += len(g[0]) + 1
-    h = 190
-    ty = gy0 + 5 * px + 50
-    # each tagline types in, holds, then erases; lines are chained so exactly one is visible at a time
-    per = 4.0
+    # each line types in, holds, then erases; chained so exactly one is visible at a time
+    ty, per = gy0 + 5 * px + 44, 2.6
     total = per * len(TAGLINES)
     lines = []
     for i, t in enumerate(TAGLINES):
-        tw = len(t) * 9.65 + 4
+        tw = len(t) * 11 + 6
         start, end = i * per / total, (i + 1) * per / total
-        typed = start + 1.4 / total
-        hold = end - 0.6 / total
-        kt = f"0;{start:.4f};{typed:.4f};{hold:.4f};{end:.4f};1"
+        kt = f"0;{start:.4f};{start + 0.8 / total:.4f};{end - 0.4 / total:.4f};{end:.4f};1"
         lines.append(
-            f'<clipPath id="c{i}"><rect x="{(w - tw) / 2}" y="{ty - 18}" height="26" width="0">'
+            f'<clipPath id="t{i}"><rect x="{(w - tw) / 2:.1f}" y="{ty - 20}" height="28" width="0">'
             f'<animate attributeName="width" dur="{total}s" repeatCount="indefinite" '
             f'keyTimes="{kt}" values="0;0;{tw};{tw};0;0"/></rect></clipPath>'
-            f'<text x="{w / 2}" y="{ty}" fill="{TEXT}" font-size="16" text-anchor="middle" '
-            f'clip-path="url(#c{i})">{escape(t)}</text>'
+            f'<text x="{w / 2}" y="{ty}" fill="{GREEN}" font-size="18" font-weight="700" text-anchor="middle" '
+            f'clip-path="url(#t{i})">{escape(t)}</text>'
         )
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="{FONT}">'
-        f'<defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="{gx0}" x2="{gx0 + cols * px}" y1="0" y2="0"><stop offset="0" stop-color="#2ea043"/>'
-        f'<stop offset="0.5" stop-color="#56d364"/><stop offset="1" stop-color="#2ea043"/></linearGradient>'
-        f'<linearGradient id="shine"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-        f'<stop offset="0.5" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
+    sub_y = ty + 34
+    info_y = sub_y + 46
+    info = [("FULL-STACK DEVELOPER", TEXT), ("ULAANBAATAR / MONGOLIA", GOLD), ("BUILDING SPORTHUB", TEXT)]
+    info_svg = "".join(
+        f'<text x="{w * (i + 1) / 4:.0f}" y="{info_y}" fill="{col}" font-size="12" font-weight="700" '
+        f'letter-spacing="2" text-anchor="middle">{t}</text>'
+        for i, (t, col) in enumerate(info)
+    ) + "".join(
+        f'<text x="{w * (2 * i + 3) / 8:.0f}" y="{info_y}" fill="{BORDER}" font-size="12" text-anchor="middle">│</text>'
+        for i in range(2)
+    )
+    sh = 104
+    body = (
+        f'<defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="{gx0}" x2="{gx0 + cols * px}" y1="0" y2="0">'
+        f'<stop offset="0" stop-color="#2ea043"/><stop offset="0.5" stop-color="#56d364"/><stop offset="1" stop-color="#2ea043"/>'
+        f'</linearGradient><linearGradient id="shine"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+        f'<stop offset="0.5" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
         f'</linearGradient><clipPath id="letters">{"".join(front)}</clipPath></defs>'
-        f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="{BG}" stroke="{BORDER}"/>'
-        f'{matrix_rain(w, h)}'
+        f"{matrix_rain(w, h)}{bogd_khan(w, h)}"
+        f'<text x="28" y="62" font-size="13" font-weight="700"><tspan fill="{GREEN}">{USER.lower()}@github</tspan>'
+        f'<tspan fill="{MUTED}"> ~ $ </tspan><tspan fill="{TEXT}">./welcome.sh --from mongolia</tspan></text>'
         f'<g fill="#0e4429">{"".join(shadow)}</g><g fill="url(#g)">{"".join(front)}</g>'
         f'<g clip-path="url(#letters)"><rect x="-200" y="0" width="160" height="{h}" fill="url(#shine)">'
-        f'<animate attributeName="x" values="-200;{w + 40}" dur="3.5s" repeatCount="indefinite"/></rect></g>'
-        f'<rect x="{w / 2 - 260}" y="{ty - 22}" width="520" height="32" rx="6" fill="{BG}" fill-opacity="0.85"/>'
-        f'{"".join(lines)}{_header_sides(w, h)}</svg>'
+        f'<animate attributeName="x" values="-200;{w + 40}" dur="4s" repeatCount="indefinite"/></rect></g>'
+        f'<rect x="{w / 2 - 90}" y="{ty - 22}" width="180" height="30" rx="6" fill="{BG}" fill-opacity="0.85"/>'
+        f'{"".join(lines)}'
+        f'<text x="{w / 2}" y="{sub_y}" fill="{MUTED}" font-size="13" text-anchor="middle">'
+        f"building products · shipping ideas · breaking things · fixing them</text>"
+        f"{info_svg}"
+        f'{_mongol_name(46, 84, h - 150)}'
+        f'{_soyombo(w - 46 - sh * 172 / 312 / 2, 84, sh, GOLD)}'
     )
+    return window(w, h, f"{USER.lower()} — welcome.sh", body)
 
 
 def rel_time(iso):
@@ -427,9 +382,9 @@ def rel_time(iso):
     return "just now"
 
 
-def activity_svg(repos):
+def shipping_svg(repos):
     w, h = 900, 330
-    body = [prompt(w / 2, 60, "git log --all --oneline | head", "middle")]
+    body = [prompt(w / 2, 60, "git log --shipping", "middle")]
     # git log panel
     lx0, ly0, lw, lh = 20, 80, 540, 230
     body.append(f'<rect x="{lx0}" y="{ly0}" width="{lw}" height="{lh}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
@@ -492,7 +447,7 @@ def activity_svg(repos):
             f'<text x="{bx + bw}" y="{y}" font-size="12" fill="{MUTED}" text-anchor="end">{pct:.1f}%</text>'
             f'<rect x="{bx + 16}" y="{y + 5}" width="{(bw - 16) * pct / 100}" height="3" rx="1.5" fill="{colors[n]}" opacity="0.6"/>'
         )
-    return window(w, h, f"{USER.lower()} — activity", "".join(body))
+    return window(w, h, f"{USER.lower()} — shipping.log", "".join(body))
 
 
 def main():
@@ -500,20 +455,26 @@ def main():
         raise SystemExit("GH_TOKEN is required")
     avatar, total, weeks, days = fetch()
     s = stats(days)
-    write_card("contributions.svg", contributions_svg(total, weeks))
-    write_card("whoami.svg", whoami_svg(avatar, total, s))
-    write_card("header.svg", header_svg())
-    write_card("activity.svg", activity_svg(fetch_repos()))
+    repos = fetch_repos()
+    pushed = [r for r in repos if r["name"].lower() != USER.lower()]
+    last_push = None
+    if pushed and pushed[0].get("pushedAt"):
+        last_push = (pushed[0]["name"], pushed[0]["pushedAt"])
+    write_card("hero.svg", hero_svg())
+    write_card("whoami.svg", whoami_svg(avatar, last_push))
+    write_card("shipping.svg", shipping_svg(repos))
 
     import extras  # imported late: extras reuses this module's helpers
 
     prof = extras.fetch_profile()
-    write_card("city.svg", extras.city_svg(total, weeks, s))
-    write_card("habits.svg", extras.habits_svg(days, s, prof))
+    shots = os.path.join(OUT, "shots")
     write_card("neofetch.svg", extras.neofetch_svg(total, s, prof))
+    write_card("mission.svg", extras.mission_svg(shots))
+    write_card("city.svg", extras.city_svg(total, weeks, s))
+    write_card("achievements.svg", extras.achievements_svg(days, s, prof, len(extras.PROJECTS)))
+    write_card("projects.svg", extras.projects_svg(shots))
     write_card("ub.svg", extras.ub_svg(extras.fetch_weather()))
-    write_card("pacman.svg", extras.pacman_svg(weeks))
-    write_card("projects.svg", extras.projects_svg(os.path.join(OUT, "shots")))
+    write_card("footer.svg", extras.footer_svg())
     print(f"total={total} current={s['current']} longest={s['longest']} active={s['active']}")
 
 

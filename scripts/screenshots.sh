@@ -11,7 +11,7 @@ shoot() {
   python3 -c "
 import sys
 from PIL import Image
-Image.open(sys.argv[1]).convert('RGB').resize((800, 500), Image.LANCZOS).save(sys.argv[2], quality=78, optimize=True)
+Image.open(sys.argv[1]).convert('RGB').resize((640, 400), Image.LANCZOS).save(sys.argv[2], quality=72, optimize=True, progressive=True)
 " "$tmp/shot.png" "assets/shots/$name.jpg"
 }
 shoot 100ail https://100ail.vercel.app
