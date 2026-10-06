@@ -167,12 +167,13 @@ def contributions_svg(total, weeks):
     return window(w, h, f"{USER.lower()} — contributions.sh", "".join(body))
 
 
-def ascii_portrait(avatar_url, cols=56, rows=33):
+def ascii_portrait(avatar_url, cols=74, rows=44):
     with urllib.request.urlopen(avatar_url) as r:
         img = Image.open(io.BytesIO(r.read())).convert("L")
     img = ImageOps.autocontrast(ImageEnhance.Contrast(img).enhance(1.4))
     img = img.resize((cols, rows))
-    ramp = " .:-=+*#%@"  # bright pixels -> dense glyphs, since the card background is dark
+    # bright pixels -> dense glyphs, since the card background is dark
+    ramp = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
     px = img.load()
     return ["".join(ramp[px[x, y] * (len(ramp) - 1) // 255] for x in range(cols)) for y in range(rows)]
 
@@ -185,10 +186,10 @@ def whoami_svg(avatar_url, total, s):
     body.append(f'<rect x="{px0}" y="{py0}" width="{pw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
     body.append(f'<text x="{px0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">portrait.txt</text>')
     lines = ascii_portrait(avatar_url)
-    lh = 9.6
+    lh = 7.6
     for i, line in enumerate(lines):
         body.append(
-            f'<text x="{px0 + pw / 2}" y="{py0 + 36 + i * lh}" fill="{TEXT}" font-size="11.5" '
+            f'<text x="{px0 + pw / 2}" y="{py0 + 34 + i * lh}" fill="{TEXT}" font-size="8.6" '
             f'text-anchor="middle" xml:space="preserve" opacity="0.9">{escape(line)}</text>'
         )
     # stats panel

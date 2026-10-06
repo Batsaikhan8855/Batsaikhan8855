@@ -3,7 +3,6 @@
 <img src="assets/header.svg" alt="Batsaikhan" width="100%"/>
 
 <a href="https://github.com/Batsaikhan8855?tab=repositories"><img src="https://img.shields.io/badge/repos-browse-3fb950?style=flat-square&labelColor=0d1117&logo=github" alt="repos"/></a>
-<img src="https://komarev.com/ghpvc/?username=Batsaikhan8855&label=profile%20views&color=3fb950&style=flat-square&labelColor=0d1117" alt="profile views"/>
 <a href="https://github.com/Batsaikhan8855?tab=followers"><img src="https://img.shields.io/github/followers/Batsaikhan8855?style=flat-square&label=followers&color=3fb950&labelColor=0d1117" alt="followers"/></a>
 
 <br/><br/>
