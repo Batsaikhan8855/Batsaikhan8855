@@ -19,7 +19,7 @@ from xml.sax.saxutils import escape
 
 from PIL import Image, ImageFilter, ImageOps
 
-USER = os.environ.get("GH_USER", "Batsaikhan8855")
+USER = os.environ.get("GH_USER", "Batsaikhann")
 TOKEN = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
 OUT = os.path.join(os.path.dirname(__file__), "..", "assets")
 
@@ -320,8 +320,28 @@ def matrix_rain(w, h, cols=46, seed=8855):
     return "".join(out)
 
 
+def _header_sides(w, h):
+    """Name in traditional Mongolian script on the left, Soyombo on the right (both gold)."""
+    import base64
+
+    from extras import _soyombo
+
+    out = []
+    path = os.path.join(OUT, "mongol-name.png")
+    if os.path.exists(path):
+        img = Image.open(path)
+        ih = h - 40
+        iw = img.width * ih / img.height
+        with open(path, "rb") as f:
+            uri = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+        out.append(f'<image x="{34 - iw / 2:.1f}" y="20" width="{iw:.1f}" height="{ih}" href="{uri}"/>')
+    sc = (h - 50) / 130
+    out.append(_soyombo(w - 34 - 50 * sc, 25, sc, "#f2c94c"))
+    return "".join(out)
+
+
 def header_svg(name="BATSAIKHAN"):
-    px, gap = 11, 0
+    px, gap = 10, 0
     cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
     w = 900
     gx0 = (w - cols * px) / 2
@@ -369,7 +389,7 @@ def header_svg(name="BATSAIKHAN"):
         f'<g clip-path="url(#letters)"><rect x="-200" y="0" width="160" height="{h}" fill="url(#shine)">'
         f'<animate attributeName="x" values="-200;{w + 40}" dur="3.5s" repeatCount="indefinite"/></rect></g>'
         f'<rect x="{w / 2 - 260}" y="{ty - 22}" width="520" height="32" rx="6" fill="{BG}" fill-opacity="0.85"/>'
-        f'{"".join(lines)}</svg>'
+        f'{"".join(lines)}{_header_sides(w, h)}</svg>'
     )
 
 
@@ -473,6 +493,7 @@ def main():
         ("neofetch.svg", extras.neofetch_svg(total, s, prof)),
         ("ub.svg", extras.ub_svg(extras.fetch_weather())),
         ("pacman.svg", extras.pacman_svg(weeks)),
+        ("projects.svg", extras.projects_svg(os.path.join(OUT, "shots"))),
     ):
         with open(os.path.join(OUT, name), "w") as f:
             f.write(svg)

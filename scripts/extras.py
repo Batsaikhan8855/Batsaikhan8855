@@ -480,3 +480,58 @@ def pacman_svg(weeks):
             f'keyPoints="0;0;1;1" keyTimes="0;{k0:.4f};{min(0.999, (T - 2) / T + k0):.4f};1" calcMode="linear"/></g>'
         )
     return window(w, h, f"{USER.lower()} — pacman.sh", "".join(body))
+
+
+# ---------------------------------------------------------------- live project screenshots
+
+PROJECTS = [
+    ("100ail", "100ail.vercel.app", "https://github.com/Batsaikhann/100ail",
+     "BarilgaHUB — construction materials marketplace", "NestJS · Next.js · PostgreSQL"),
+    ("sporthub", "sporthub-eight.vercel.app", "https://sporthub-eight.vercel.app",
+     "SportHub Mongolia — one membership for every sport", "Next.js · TypeScript · Supabase"),
+]
+
+
+def _data_uri(path, mime):
+    import base64
+
+    with open(path, "rb") as f:
+        return f"data:{mime};base64,{base64.b64encode(f.read()).decode()}"
+
+
+def projects_svg(shots_dir):
+    w, h = 900, 400
+    body = [prompt(w / 2, 60, "open ./projects --live", "middle")]
+    pw, gap = 420, 20
+    for i, (name, host, _link, desc, stack) in enumerate(PROJECTS):
+        x0, y0 = 20 + i * (pw + gap), 80
+        ih = pw * 500 / 800 * 0.9
+        iw = pw - 20
+        body.append(f'<rect x="{x0}" y="{y0}" width="{pw}" height="{h - y0 - 20}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+        # browser chrome
+        body.append(
+            f'<circle cx="{x0 + 16}" cy="{y0 + 16}" r="4" fill="#ff5f56"/><circle cx="{x0 + 28}" cy="{y0 + 16}" r="4" fill="#ffbd2e"/>'
+            f'<circle cx="{x0 + 40}" cy="{y0 + 16}" r="4" fill="#27c93f"/>'
+            f'<rect x="{x0 + 54}" y="{y0 + 7}" width="{pw - 64}" height="18" rx="9" fill="{BG}" stroke="{BORDER}"/>'
+            f'<text x="{x0 + 66}" y="{y0 + 20}" font-size="10" fill="{MUTED}"><tspan fill="{GREEN}">🔒 https://</tspan>{escape(host)}</text>'
+        )
+        shot = os.path.join(shots_dir, f"{name}.jpg")
+        ix, iy = x0 + 10, y0 + 32
+        body.append(f'<clipPath id="shot{i}"><rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" rx="4"/></clipPath>')
+        if os.path.exists(shot):
+            body.append(
+                f'<image x="{ix}" y="{iy}" width="{iw}" height="{iw * 500 / 800}" clip-path="url(#shot{i})" '
+                f'preserveAspectRatio="xMidYMin slice" href="{_data_uri(shot, "image/jpeg")}"/>'
+            )
+        else:
+            body.append(f'<rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" fill="{BG}"/>')
+        body.append(f'<rect x="{ix}" y="{iy}" width="{iw}" height="{ih}" rx="4" fill="none" stroke="{BORDER}"/>')
+        ty = iy + ih + 22
+        body.append(
+            f'<text x="{ix}" y="{ty}" font-size="12" font-weight="700" fill="{TEXT}">{escape(desc)}</text>'
+            f'<text x="{ix}" y="{ty + 18}" font-size="11" fill="{GREEN}">{escape(stack)}</text>'
+            f'<circle cx="{x0 + pw - 46}" cy="{y0 + 16}" r="3.5" fill="{GREEN}"><animate attributeName="opacity" '
+            f'values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></circle>'
+            f'<text x="{x0 + pw - 18}" y="{y0 + 20}" font-size="10" fill="{GREEN}" text-anchor="end">live</text>'
+        )
+    return window(w, h, f"{USER.lower()} — projects", "".join(body))

@@ -3,6 +3,7 @@ name: Update profile cards
 on:
   schedule:
     - cron: "0 * * * *"
+    - cron: "30 0 * * *"
   workflow_dispatch:
   push:
     branches: [main]
@@ -10,6 +11,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: profile-write
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -20,6 +25,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pillow
+      - name: Refresh live-site screenshots (daily)
+        if: github.event_name != 'schedule' || github.event.schedule == '30 0 * * *'
+        run: ./scripts/screenshots.sh
       - run: python scripts/generate.py
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -29,7 +37,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets
           git diff --cached --quiet || git commit -m "chore: update profile cards"
-          git push
+          for i in 1 2 3; do git pull --rebase -X theirs && git push && break; sleep 5; done
 
   snake:
     runs-on: ubuntu-latest
