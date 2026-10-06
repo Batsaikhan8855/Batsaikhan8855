@@ -168,60 +168,84 @@ def contributions_svg(total, weeks):
 
 
 PORTRAIT_SRC = os.path.join(OUT, "portrait-source.png")
+# optional person mask (white = subject), e.g. from macOS Vision person segmentation
+PORTRAIT_MASK = os.path.join(OUT, "portrait-mask.png")
 
 
-def ascii_portrait(avatar_url, cols=120, rows=72):
-    """Return rows of (char, brightness) pairs, from a face-cropped source if present."""
+def ascii_portrait(avatar_url, cols=106, rows=124):
+    """Return rows of (char, tone 0-1, subject 0-1) from the source photo (or avatar)."""
     if os.path.exists(PORTRAIT_SRC):
         img = Image.open(PORTRAIT_SRC)
     else:
         with urllib.request.urlopen(avatar_url) as r:
             img = Image.open(io.BytesIO(r.read()))
-    img = img.convert("L").filter(ImageFilter.UnsharpMask(2, 180, 2))
-    img = ImageOps.equalize(img).point(lambda v: int(255 * (v / 255) ** 0.75))  # lift shadows in the hair
-    img = img.resize((cols, rows), Image.LANCZOS)
-    # bright pixels -> dense glyphs, since the card background is dark
+    img = img.convert("L").filter(ImageFilter.UnsharpMask(2, 200, 2))
+    if os.path.exists(PORTRAIT_MASK):
+        mask = Image.open(PORTRAIT_MASK).convert("L").resize(img.size)
+    else:
+        mask = Image.new("L", img.size, 255)
+    # equalize using only the subject's pixels, so a dark shirt still gets the full tonal range
+    cdf, acc = [], 0
+    for n in img.histogram(mask.point(lambda v: 255 if v > 128 else 0)):
+        acc += n
+        cdf.append(acc)
+    img = img.point([int(255 * c / (cdf[-1] or 1)) for c in cdf])
+    tone = img.resize((cols, rows), Image.LANCZOS).load()
+    sub = mask.resize((cols, rows), Image.LANCZOS).load()
     ramp = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
-    px = img.load()
-    return [
-        [(ramp[max(1, px[x, y] * (len(ramp) - 1) // 255)], px[x, y]) for x in range(cols)]
-        for y in range(rows)
-    ]
+    rows_out = []
+    for y in range(rows):
+        row = []
+        for x in range(cols):
+            m = sub[x, y] / 255
+            t = 0.22 + 0.78 * tone[x, y] / 255  # floor keeps the darkest areas legible
+            if m < 0.16:
+                ch = "." if (x * 7 + y * 13) % 9 == 0 else " "  # faint dust in the background
+            else:
+                ch = ramp[max(1, int(t * (len(ramp) - 1)))]
+            row.append((ch, t, m))
+        rows_out.append(row)
+    return rows_out
 
 
 def whoami_svg(avatar_url, total, s):
-    w, h = 900, 470
+    w, h = 900, 680
     body = [prompt(w / 2, 60, "whoami", "middle")]
-    # portrait panel
-    px0, py0, pw, ph = 20, 80, 400, 370
+    # portrait panel: tall, to fit a full-body photo
+    px0, py0, pw, ph = 20, 80, 300, 580
     body.append(f'<rect x="{px0}" y="{py0}" width="{pw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
     body.append(f'<text x="{px0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">portrait.txt</text>')
     lines = ascii_portrait(avatar_url)
-    lh = 4.8
+    lh = 4.4
 
-    def tint(v):
-        # dark -> green midtones (hair) -> light gray highlights (skin)
-        v = v // 12 * 12 + 6  # quantize so neighbouring glyphs share one <tspan>
-        t = v / 255
-        lo, mid, hi = (30, 36, 44), (35, 134, 54), (230, 237, 243)
-        a, b, k = (lo, mid, t / 0.45) if t < 0.45 else (mid, hi, (t - 0.45) / 0.55)
-        return "#" + "".join(f"{int(a[i] + (b[i] - a[i]) * k):02x}" for i in range(3))
+    def tint(t, m):
+        # dark green -> green midtones -> light gray highlights, faded out off the subject
+        def mix(a, b, k):
+            k = max(0.0, min(1.0, k))
+            return [a[i] + (b[i] - a[i]) * k for i in range(3)]
+
+        if t < 0.45:
+            c = mix((22, 80, 36), (35, 134, 54), (t - 0.22) / 0.23)
+        else:
+            c = mix((35, 134, 54), (230, 237, 243), (t - 0.45) / 0.55)
+        c = mix((28, 33, 40), c, m)
+        return "#" + "".join(f"{int(v) // 8 * 8:02x}" for v in c)  # quantize so runs share a <tspan>
 
     for i, line in enumerate(lines):
         runs = []
-        for ch, v in line:
-            c = tint(v)
+        for ch, t, m in line:
+            c = tint(t, m)
             if runs and runs[-1][0] == c:
                 runs[-1][1].append(ch)
             else:
                 runs.append((c, [ch]))
         spans = "".join(f'<tspan fill="{c}">{escape("".join(chs))}</tspan>' for c, chs in runs)
         body.append(
-            f'<text x="{px0 + pw / 2}" y="{py0 + 27 + i * lh}" font-size="5.3" '
+            f'<text x="{px0 + pw / 2}" y="{py0 + 28 + i * lh}" font-size="4.4" '
             f'text-anchor="middle" xml:space="preserve">{spans}</text>'
         )
     # stats panel
-    sx0, sy0, sw = 440, 80, 440
+    sx0, sy0, sw = 340, 80, 540
     body.append(f'<rect x="{sx0}" y="{sy0}" width="{sw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
     body.append(f'<text x="{sx0 + 12}" y="{sy0 + 18}" fill="{MUTED}" font-size="10">stats.json</text>')
     tiles = [
@@ -232,14 +256,14 @@ def whoami_svg(avatar_url, total, s):
         ("best day", f"{s['best']}", s["best_date"], False),
         ("avg / active day", f"{s['avg']:.1f}", "contributions", False),
     ]
-    tw, th = 200, 54
+    tw, th = (sw - 40) // 2, 72
     for i, (label, val, unit, hi) in enumerate(tiles):
         tx = sx0 + 14 + (i % 2) * (tw + 12)
         ty = sy0 + 30 + (i // 2) * (th + 8)
         body.append(
             f'<rect x="{tx}" y="{ty}" width="{tw}" height="{th}" rx="6" fill="{BG}" stroke="{BORDER}"/>'
-            f'<text x="{tx + 10}" y="{ty + 16}" fill="{MUTED}" font-size="10">$ {escape(label)}</text>'
-            f'<text x="{tx + 10}" y="{ty + 42}" font-size="22" font-weight="700" fill="{GREEN if hi else TEXT}">'
+            f'<text x="{tx + 12}" y="{ty + 20}" fill="{MUTED}" font-size="11">$ {escape(label)}</text>'
+            f'<text x="{tx + 12}" y="{ty + 56}" font-size="30" font-weight="700" fill="{GREEN if hi else TEXT}">'
             f'{escape(val)}<tspan fill="{MUTED}" font-size="10" font-weight="400" dx="6">{escape(unit)}</tspan></text>'
         )
     # monthly bars
@@ -248,7 +272,7 @@ def whoami_svg(avatar_url, total, s):
     body.append(f'<text x="{sx0 + 14}" y="{by + 10}" fill="{MUTED}" font-size="10">$ contributions / month</text>')
     vals = list(s["months"].values())
     mx = max(vals) or 1
-    bw, bgap = 26, 9
+    bw, bgap = 30, 12
     bx0 = sx0 + 14 + (sw - 28 - 12 * bw - 11 * bgap) / 2
     base = by + bh_area + 4
     for i, ((y, m), v) in enumerate(s["months"].items()):
