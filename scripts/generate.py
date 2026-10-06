@@ -1,7 +1,7 @@
 """Generate the terminal-style SVG cards of the BATSAIKHANN OS profile README.
 
 Outputs (assets/):
-  hero.svg         `./welcome.sh` banner: name, typing tagline, Mongolian-script name, Bogd Khan ridge
+  hero.svg         banner: pixel name, typing tagline, Mongolian-script name, matrix rain
   whoami.svg       ASCII portrait + identity
   shipping.svg     `git log --shipping`: latest real commits + language breakdown
   neofetch.svg, mission.svg, city.svg, achievements.svg, projects.svg, ub.svg, footer.svg - see extras.py
@@ -247,7 +247,12 @@ GLYPHS = {
     "T": ["########", "   ##   ", "   ##   ", "   ##   ", "   ##   "],
 }
 
-TAGLINES = ["> build.", "> ship.", "> iterate.", "> repeat."]
+TAGLINES = [
+    "Full-stack developer",
+    "Building marketplaces with NestJS + Next.js",
+    "Shipping web apps, maps & games",
+    "Always learning, always shipping",
+]
 
 
 def matrix_rain(w, h, cols=46, seed=8855):
@@ -257,14 +262,7 @@ def matrix_rain(w, h, cols=46, seed=8855):
     rnd = random.Random(seed)  # fixed seed keeps the file stable between runs
     glyphs = "АБВГДЕЁЖЗИЙКЛМНОӨПРСТУҮФХЦЧШЩЪЫЬЭЮЯ0123456789{}<>/=;$#"
     fs = 12
-    out = [
-        f'<clipPath id="rain"><rect x="1" y="33" width="{w - 2}" height="{h - 34}" rx="12"/></clipPath>'
-        f'<linearGradient id="fade"><stop offset="0" stop-color="#fff"/><stop offset="0.16" stop-color="#fff"/>'
-        f'<stop offset="0.26" stop-color="#fff" stop-opacity="0.08"/><stop offset="0.74" stop-color="#fff" stop-opacity="0.08"/>'
-        f'<stop offset="0.84" stop-color="#fff"/><stop offset="1" stop-color="#fff"/></linearGradient>'
-        f'<mask id="edges"><rect width="{w}" height="{h}" fill="url(#fade)"/></mask>'
-        f'<g clip-path="url(#rain)" mask="url(#edges)" font-size="{fs}">'
-    ]
+    out = [f'<clipPath id="rain"><rect x="1" y="1" width="{w - 2}" height="{h - 2}" rx="12"/></clipPath><g clip-path="url(#rain)" font-size="{fs}">']
     for c in range(cols):
         x = 10 + c * (w - 20) / cols
         n = rnd.randint(8, 16)
@@ -277,7 +275,7 @@ def matrix_rain(w, h, cols=46, seed=8855):
         )
         span = n * (fs + 2)
         out.append(
-            f'<text opacity="0.2">{chars}<animateTransform attributeName="transform" type="translate" '
+            f'<text opacity="0.45">{chars}<animateTransform attributeName="transform" type="translate" '
             f'from="0 {-span}" to="0 {h}" dur="{dur:.2f}s" begin="{delay:.2f}s" repeatCount="indefinite"/></text>'
         )
     out.append("</g>")
@@ -329,9 +327,9 @@ def _mongol_name(x, y, height, col):
 
 
 def hero_svg(name="BATSAIKHAN"):
-    w, h, px = 900, 340, 8.6
+    w, h, px = 900, 190, 9.4
     cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
-    gx0, gy0 = (w - cols * px) / 2, 92
+    gx0, gy0 = (w - cols * px) / 2, 40
     shadow, front = [], []
     x = 0
     for c in name:
@@ -340,61 +338,40 @@ def hero_svg(name="BATSAIKHAN"):
             for k, ch in enumerate(row):
                 if ch == "#":
                     cx, cy = gx0 + (x + k) * px, gy0 + r * px
-                    shadow.append(f'<rect x="{cx + 3.5:.1f}" y="{cy + 3.5:.1f}" width="{px}" height="{px}"/>')
+                    shadow.append(f'<rect x="{cx + 4:.1f}" y="{cy + 4:.1f}" width="{px}" height="{px}"/>')
                     front.append(f'<rect x="{cx:.1f}" y="{cy:.1f}" width="{px + 0.5}" height="{px + 0.5}"/>')
         x += len(g[0]) + 1
-    # each line types in, holds, then erases; chained so exactly one is visible at a time
-    ty, per = gy0 + 5 * px + 44, 2.6
+    # each tagline types in, holds, then erases; chained so exactly one is visible at a time
+    ty, per = gy0 + 5 * px + 50, 4.0
     total = per * len(TAGLINES)
     lines = []
     for i, t in enumerate(TAGLINES):
-        tw = len(t) * 11 + 6
+        tw = len(t) * 9.65 + 4
         start, end = i * per / total, (i + 1) * per / total
-        kt = f"0;{start:.4f};{start + 0.8 / total:.4f};{end - 0.4 / total:.4f};{end:.4f};1"
+        kt = f"0;{start:.4f};{start + 1.4 / total:.4f};{end - 0.6 / total:.4f};{end:.4f};1"
         lines.append(
-            f'<clipPath id="t{i}"><rect x="{(w - tw) / 2:.1f}" y="{ty - 20}" height="28" width="0">'
+            f'<clipPath id="t{i}"><rect x="{(w - tw) / 2:.1f}" y="{ty - 18}" height="26" width="0">'
             f'<animate attributeName="width" dur="{total}s" repeatCount="indefinite" '
-            f'keyTimes="{kt}" values="0;0;{tw};{tw};0;0"/></rect></clipPath>'
-            f'<text x="{w / 2}" y="{ty}" fill="{GREEN}" font-size="18" font-weight="700" text-anchor="middle" '
+            f'keyTimes="{kt}" values="0;0;{tw:.1f};{tw:.1f};0;0"/></rect></clipPath>'
+            f'<text x="{w / 2}" y="{ty}" fill="{TEXT}" font-size="16" font-weight="700" text-anchor="middle" '
             f'clip-path="url(#t{i})">{escape(t)}</text>'
         )
-    sub_y = ty + 34
-    info_y = sub_y + 46
-    info = [("FULL-STACK DEVELOPER", TEXT), ("ULAANBAATAR / MONGOLIA", GOLD), ("BUILDING SPORTHUB", TEXT)]
-    adv, gap = 12 * 0.6 + 2, 30  # monospace advance at 12px + letter-spacing; space around each divider
-    widths = [len(t) * adv - 2 for t, _ in info]
-    ix = (w - sum(widths) - gap * 2 * (len(info) - 1)) / 2
-    parts = []
-    for i, ((t, col), tw) in enumerate(zip(info, widths)):
-        parts.append(
-            f'<text x="{ix:.1f}" y="{info_y}" fill="{col}" font-size="12" font-weight="700" letter-spacing="2">{t}</text>'
-        )
-        ix += tw
-        if i < len(info) - 1:
-            parts.append(f'<text x="{ix + gap:.1f}" y="{info_y}" fill="{BORDER}" font-size="12" text-anchor="middle">│</text>')
-            ix += gap * 2
-    info_svg = "".join(parts)
-    side, side_y = 140, 108
-    body = (
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="{FONT}">'
         f'<defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="{gx0}" x2="{gx0 + cols * px}" y1="0" y2="0">'
         f'<stop offset="0" stop-color="#2ea043"/><stop offset="0.5" stop-color="#56d364"/><stop offset="1" stop-color="#2ea043"/>'
         f'</linearGradient><linearGradient id="shine"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-        f'<stop offset="0.5" stop-color="#fff" stop-opacity="0.5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
+        f'<stop offset="0.5" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
         f'</linearGradient><clipPath id="letters">{"".join(front)}</clipPath></defs>'
-        f"{matrix_rain(w, h)}{bogd_khan(w, h)}"
-        f'<text x="28" y="62" font-size="13" font-weight="700"><tspan fill="{GREEN}">{USER.lower()}@github</tspan>'
-        f'<tspan fill="{MUTED}"> ~ $ </tspan><tspan fill="{TEXT}">./welcome.sh --from mongolia</tspan></text>'
+        f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="{BG}" stroke="{BORDER}"/>'
+        f"{matrix_rain(w, h)}"
         f'<g fill="#0e4429">{"".join(shadow)}</g><g fill="url(#g)">{"".join(front)}</g>'
         f'<g clip-path="url(#letters)"><rect x="-200" y="0" width="160" height="{h}" fill="url(#shine)">'
-        f'<animate attributeName="x" values="-200;{w + 40}" dur="4s" repeatCount="indefinite"/></rect></g>'
-        f'<rect x="{w / 2 - 90}" y="{ty - 22}" width="180" height="30" rx="6" fill="{BG}" fill-opacity="0.85"/>'
+        f'<animate attributeName="x" values="-200;{w + 40}" dur="3.5s" repeatCount="indefinite"/></rect></g>'
+        f'<rect x="{w / 2 - 260}" y="{ty - 22}" width="520" height="32" rx="6" fill="{BG}" fill-opacity="0.85"/>'
         f'{"".join(lines)}'
-        f'<text x="{w / 2}" y="{sub_y}" fill="{MUTED}" font-size="13" text-anchor="middle">'
-        f"building products · shipping ideas · breaking things · fixing them</text>"
-        f"{info_svg}"
-        f'{_mongol_name(50, side_y - 8, side + 16, GREEN)}'
+        f"{_mongol_name(46, 20, h - 40, GREEN)}</svg>"
     )
-    return window(w, h, f"{USER.lower()} — welcome.sh", body)
 
 
 def rel_time(iso):
