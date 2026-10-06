@@ -293,6 +293,33 @@ TAGLINES = [
 ]
 
 
+def matrix_rain(w, h, cols=46, seed=8855):
+    """Falling columns of Mongolian Cyrillic + code glyphs behind the banner."""
+    import random
+
+    rnd = random.Random(seed)  # fixed seed keeps the file stable between runs
+    glyphs = "АБВГДЕЁЖЗИЙКЛМНОӨПРСТУҮФХЦЧШЩЪЫЬЭЮЯ0123456789{}<>/=;$#"
+    fs = 12
+    out = [f'<clipPath id="rain"><rect x="1" y="1" width="{w - 2}" height="{h - 2}" rx="12"/></clipPath><g clip-path="url(#rain)" font-size="{fs}">']
+    for c in range(cols):
+        x = 10 + c * (w - 20) / cols
+        n = rnd.randint(8, 16)
+        dur = rnd.uniform(4, 9)
+        delay = -rnd.uniform(0, dur)
+        chars = "".join(
+            f'<tspan x="{x:.1f}" dy="{fs + 2}" fill="{"#7ee787" if i == n - 1 else "#1a7f37"}" '
+            f'fill-opacity="{0.25 + 0.6 * i / n:.2f}">{escape(rnd.choice(glyphs))}</tspan>'
+            for i in range(n)
+        )
+        span = n * (fs + 2)
+        out.append(
+            f'<text opacity="0.45">{chars}<animateTransform attributeName="transform" type="translate" '
+            f'from="0 {-span}" to="0 {h}" dur="{dur:.2f}s" begin="{delay:.2f}s" repeatCount="indefinite"/></text>'
+        )
+    out.append("</g>")
+    return "".join(out)
+
+
 def header_svg(name="BATSAIKHAN"):
     px, gap = 11, 0
     cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
@@ -337,9 +364,11 @@ def header_svg(name="BATSAIKHAN"):
         f'<stop offset="0.5" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
         f'</linearGradient><clipPath id="letters">{"".join(front)}</clipPath></defs>'
         f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="{BG}" stroke="{BORDER}"/>'
+        f'{matrix_rain(w, h)}'
         f'<g fill="#0e4429">{"".join(shadow)}</g><g fill="url(#g)">{"".join(front)}</g>'
         f'<g clip-path="url(#letters)"><rect x="-200" y="0" width="160" height="{h}" fill="url(#shine)">'
         f'<animate attributeName="x" values="-200;{w + 40}" dur="3.5s" repeatCount="indefinite"/></rect></g>'
+        f'<rect x="{w / 2 - 260}" y="{ty - 22}" width="520" height="32" rx="6" fill="{BG}" fill-opacity="0.85"/>'
         f'{"".join(lines)}</svg>'
     )
 
@@ -442,6 +471,8 @@ def main():
         ("city.svg", extras.city_svg(total, weeks, s)),
         ("habits.svg", extras.habits_svg(days, s, prof)),
         ("neofetch.svg", extras.neofetch_svg(total, s, prof)),
+        ("ub.svg", extras.ub_svg(extras.fetch_weather())),
+        ("pacman.svg", extras.pacman_svg(weeks)),
     ):
         with open(os.path.join(OUT, name), "w") as f:
             f.write(svg)

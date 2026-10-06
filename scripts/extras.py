@@ -268,3 +268,215 @@ def neofetch_svg(total, s, prof):
     for i, c in enumerate(palette):
         body.append(f'<rect x="{x0 + i * 26}" y="{y0 + 36 + len(info) * 19 - 6}" width="24" height="14" fill="{c}"/>')
     return window(w, h, f"{USER.lower()} — neofetch", "".join(body))
+
+
+# ---------------------------------------------------------------- UB weather + proverb of the day
+
+def fetch_weather():
+    import json
+    import urllib.request
+
+    url = (
+        "https://api.open-meteo.com/v1/forecast?latitude=47.92&longitude=106.92"
+        "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day"
+        "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=Asia%2FUlaanbaatar&forecast_days=1"
+    )
+    with urllib.request.urlopen(url, timeout=20) as r:
+        return json.load(r)
+
+
+# wttr.in-style icons; each is 5 lines
+ICONS = {
+    "sun": ["    \\   /    ", "     .-.     ", "  ― (   ) ―  ", "     `-’     ", "    /   \\    "],
+    "moon": ["     _.._    ", "   .' .-'`   ", "  /  /       ", "  |  |       ", "   \\  '.___.;"],
+    "partly": ["   \\  /      ", " _ /\"\".-.    ", "   \\_(   ).  ", "   /(___(__) ", "             "],
+    "cloud": ["             ", "     .--.    ", "  .-(    ).  ", " (___.__)__) ", "             "],
+    "fog": ["             ", " _ - _ - _ - ", "  _ - _ - _  ", " _ - _ - _ - ", "             "],
+    "rain": ["     .-.     ", "    (   ).   ", "   (___(__)  ", "    ‚‘‚‘‚‘   ", "    ‚’‚’‚’   "],
+    "snow": ["     .-.     ", "    (   ).   ", "   (___(__)  ", "    *  *  *  ", "   *  *  *   "],
+    "storm": ["     .-.     ", "    (   ).   ", "   (___(__)  ", "    ⚡‘‘⚡‘‘  ", "    ‚’‚’⚡’  "],
+}
+ICON_COLORS = {"sun": "#f2c94c", "moon": "#c9d1d9", "partly": "#f2c94c", "cloud": "#8b949e",
+               "fog": "#8b949e", "rain": "#58a6ff", "snow": "#e6edf3", "storm": "#d29922"}
+
+
+def _wmo(code, is_day):
+    if code == 0:
+        return ("sun" if is_day else "moon"), "Clear"
+    if code in (1, 2):
+        return ("partly" if is_day else "moon"), "Partly cloudy"
+    if code == 3:
+        return "cloud", "Overcast"
+    if code in (45, 48):
+        return "fog", "Fog"
+    if code in (71, 73, 75, 77, 85, 86):
+        return "snow", "Snow"
+    if code >= 95:
+        return "storm", "Thunderstorm"
+    if code >= 51:
+        return "rain", "Rain"
+    return "cloud", "Cloudy"
+
+
+PROVERBS = [
+    ("Ажил хийвэл ам тосдоно.", "Work hard, and you will taste the butter."),
+    ("Хичээвэл бүтнэ.", "Effort makes it happen."),
+    ("Шантарвал шар ус, шамдвал алт.", "Give up and it is muddy water; persist and it is gold."),
+    ("Нэг мод гал болдоггүй, нэг хүн айл болдоггүй.", "One log can't make a fire; one person can't make a home."),
+    ("Ам алдвал барьж болдоггүй, агт алдвал барьж болдог.", "A runaway horse can be caught; a careless word cannot."),
+    ("Хүн болох багаасаа, хүлэг болох унаганаасаа.", "A great person shows it as a child, a great steed as a foal."),
+    ("Долоо хэмжиж нэг огтол.", "Measure seven times, cut once."),
+    ("Зуун сонсохоор нэг үз.", "Better to see once than to hear a hundred times."),
+    ("Усыг нь уувал ёсыг нь дага.", "Drink their water, follow their customs."),
+    ("Хүн ахтай, дээл захтай.", "Every person has elders, as every deel has a collar."),
+    ("Мянган бээрийн аян нэг алхмаас эхэлдэг.", "A thousand-mile journey starts with a single step."),
+    ("Эрт босвол нэг юм үзнэ, орой унтвал нэг юм сонсоно.", "Rise early and you'll see something; stay up late and you'll hear something."),
+    ("Явсан нохой яс зууна.", "The dog that roams finds a bone."),
+    ("Цаг цагаараа байдаггүй, цахилдаг ногоороо байдаггүй.", "Times change, as the iris won't stay green forever."),
+]
+
+
+def _wrap(text, width):
+    lines, cur = [], ""
+    for word in text.split():
+        if cur and len(cur) + 1 + len(word) > width:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = f"{cur} {word}".strip()
+    return lines + ([cur] if cur else [])
+
+
+def ub_svg(weather):
+    w, h = 900, 330
+    body = [prompt(w / 2, 60, "curl wttr.in/ulaanbaatar && fortune mn | cowsay", "middle")]
+    # weather panel
+    px0, py0, pw, ph = 20, 80, 420, 230
+    body.append(f'<rect x="{px0}" y="{py0}" width="{pw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+    body.append(f'<text x="{px0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">Weather report: Ulaanbaatar, Mongolia</text>')
+    cur, daily = weather["current"], weather["daily"]
+    kind, label = _wmo(cur["weather_code"], cur["is_day"])
+    for i, line in enumerate(ICONS[kind]):
+        body.append(
+            f'<text x="{px0 + 16}" y="{py0 + 52 + i * 16}" fill="{ICON_COLORS[kind]}" font-size="14" '
+            f'xml:space="preserve">{escape(line)}</text>'
+        )
+    t = cur["temperature_2m"]
+    tcol = "#58a6ff" if t <= 0 else "#39c5cf" if t < 10 else GREEN if t < 22 else "#d29922" if t < 30 else "#f85149"
+    hhmm = lambda iso: iso.split("T")[1]
+    rows = [
+        (label, None),
+        (f"{t:+.0f}°C", f"feels {cur['apparent_temperature']:+.0f}°C"),
+        (f"↓{daily['temperature_2m_min'][0]:+.0f}°  ↑{daily['temperature_2m_max'][0]:+.0f}°C", None),
+        (f"{cur['wind_speed_10m']:.0f} km/h wind", f"{cur['relative_humidity_2m']}% hum"),
+        (f"☀ {hhmm(daily['sunrise'][0])}  ☾ {hhmm(daily['sunset'][0])}", None),
+    ]
+    tx = px0 + 160
+    for i, (a, b) in enumerate(rows):
+        col = tcol if i == 1 else TEXT
+        size = 22 if i == 1 else 13
+        y = py0 + 50 + i * 26 + (4 if i > 1 else 0)
+        extra = f'<tspan fill="{MUTED}" font-size="11" font-weight="400" dx="10">{escape(b)}</tspan>' if b else ""
+        body.append(
+            f'<text x="{tx}" y="{y}" fill="{col}" font-size="{size}" font-weight="{700 if i < 2 else 400}">'
+            f"{escape(a)}{extra}</text>"
+        )
+    body.append(
+        f'<text x="{px0 + 12}" y="{py0 + ph - 12}" fill="{MUTED}" font-size="10">'
+        f"updated {cur['time'].replace('T', ' ')} UB time · open-meteo.com</text>"
+    )
+    # fortune | cowsay panel
+    fx0, fw = px0 + pw + 20, w - (px0 + pw + 20) - 20
+    body.append(f'<rect x="{fx0}" y="{py0}" width="{fw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+    body.append(f'<text x="{fx0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">proverb of the day</text>')
+    today = dt.datetime.now(TZ).date()
+    mn, en = PROVERBS[today.toordinal() % len(PROVERBS)]
+    text = _wrap(mn, 34) + [""] + _wrap(en, 34)
+    width = max(len(l) for l in text)
+    bs = "\\"
+    bubble = [" " + "_" * (width + 2)]
+    for i, l in enumerate(text):
+        lo, hi = ("/", bs) if i == 0 else (bs, "/") if i == len(text) - 1 else ("|", "|")
+        bubble.append(f"{lo} {l.ljust(width)} {hi}")
+    bubble.append(" " + "-" * (width + 2))
+    cow = [
+        r"        \   ^__^",
+        r"         \  (oo)\_______",
+        r"            (__)\       )\/\ ",
+        r"                ||----w |",
+        r"                ||     ||",
+    ]
+    fs, lh = 11, 13
+    for i, l in enumerate(bubble + cow):
+        y = py0 + 38 + i * lh
+        is_mn = 0 < i <= len(_wrap(mn, 34))
+        col = GREEN if is_mn else (TEXT if i < len(bubble) else MUTED)
+        # each line types in left-to-right, staggered
+        lw = len(l) * fs * 0.6
+        body.append(
+            f'<clipPath id="f{i}"><rect x="{fx0 + 14}" y="{y - lh}" height="{lh + 3}" width="{lw + 4}">'
+            f'<animate attributeName="width" from="0" to="{lw + 4}" begin="{0.2 + i * 0.12:.2f}s" dur="0.4s" fill="freeze"/>'
+            f'</rect></clipPath>'
+            f'<text x="{fx0 + 14}" y="{y}" fill="{col}" font-size="{fs}" xml:space="preserve" '
+            f'textLength="{lw:.1f}" lengthAdjust="spacingAndGlyphs" '
+            f'clip-path="url(#f{i})">{escape(l)}</text>'
+        )
+    return window(w, h, f"{USER.lower()} — ub.sh", "".join(body))
+
+
+# ---------------------------------------------------------------- Pac-Man
+
+def pacman_svg(weeks):
+    cell, gap = 13, 3
+    step = cell + gap
+    left, top = 24, 70
+    w = left * 2 + len(weeks) * step
+    h = top + 7 * step + 30
+    body = [prompt(w / 2, 50, "./pacman.sh --eat contributions", "middle")]
+    # serpentine path: down the first week, up the next, ...
+    order = []
+    for wi in range(len(weeks)):
+        rng = range(7) if wi % 2 == 0 else range(6, -1, -1)
+        order += [(wi, r) for r in rng]
+    per = 0.06
+    T = len(order) * per + 2.0
+    counts = {}
+    for wi, week in enumerate(weeks):
+        for d in week["contributionDays"]:
+            counts[(wi, (dt.date.fromisoformat(d["date"]).weekday() + 1) % 7)] = d["contributionCount"]
+    mx = max(counts.values() or [1]) or 1
+    center = lambda wi, r: (left + wi * step + cell / 2, top + r * step + cell / 2)
+    for i, (wi, r) in enumerate(order):
+        x, y = center(wi, r)
+        n = counts.get((wi, r), 0)
+        if n:
+            lvl = min(4, 1 + int(3.999 * n / mx))
+            k = (i * per) / T
+            body.append(
+                f'<rect x="{x - cell / 2}" y="{y - cell / 2}" width="{cell}" height="{cell}" rx="2.5" fill="{LEVELS[lvl]}">'
+                f'<animate attributeName="opacity" dur="{T:.2f}s" repeatCount="indefinite" '
+                f'keyTimes="0;{k:.4f};{min(k + 0.001, 0.97):.4f};0.97;1" values="1;1;0;0;1"/></rect>'
+            )
+        else:
+            body.append(f'<circle cx="{x}" cy="{y}" r="1.6" fill="#30363d"/>')
+    pts = [center(wi, r) for wi, r in order]
+    path = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    mouth = (
+        '<path fill="#f2c94c"><animate attributeName="d" dur="0.25s" repeatCount="indefinite" '
+        'values="M0,0 L7,-4 A8,8 0 1,0 7,4 Z;M0,0 L8,-0.5 A8,8 0 1,0 8,0.5 Z;M0,0 L7,-4 A8,8 0 1,0 7,4 Z"/></path>'
+    )
+    move = f'<animateMotion dur="{T:.2f}s" repeatCount="indefinite" rotate="auto" path="{path}" ' \
+           f'keyPoints="0;1;1" keyTimes="0;{(T - 2) / T:.4f};1" calcMode="linear"/>'
+    body.append(f"<g>{mouth}{move}</g>")
+    for gi, (gc, lag) in enumerate((("#f85149", 0.9), ("#bc8cff", 1.6))):
+        ghost = (
+            f'<path d="M-7,7 L-7,-1 A7,7 0 0,1 7,-1 L7,7 L4.5,4.5 L2,7 L0,4.5 L-2,7 L-4.5,4.5 Z" fill="{gc}"/>'
+            f'<circle cx="-2.5" cy="-1" r="2" fill="#fff"/><circle cx="2.5" cy="-1" r="2" fill="#fff"/>'
+            f'<circle cx="-2" cy="-1" r="1" fill="#0d1117"/><circle cx="3" cy="-1" r="1" fill="#0d1117"/>'
+        )
+        k0 = lag / T
+        body.append(
+            f'<g>{ghost}<animateMotion dur="{T:.2f}s" repeatCount="indefinite" path="{path}" '
+            f'keyPoints="0;0;1;1" keyTimes="0;{k0:.4f};{min(0.999, (T - 2) / T + k0):.4f};1" calcMode="linear"/></g>'
+        )
+    return window(w, h, f"{USER.lower()} — pacman.sh", "".join(body))

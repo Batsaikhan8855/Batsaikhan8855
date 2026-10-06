@@ -19,6 +19,8 @@
 
 <img src="assets/neofetch.svg" alt="neofetch" width="100%"/>
 
+<img src="assets/ub.svg" alt="Ulaanbaatar weather and proverb of the day" width="100%"/>
+
 <br/>
 
 ```console
@@ -45,6 +47,8 @@ batsaikhan8855@github ~ $ ./snake.sh --eat contributions
 
 <img src="https://raw.githubusercontent.com/Batsaikhan8855/Batsaikhan8855/output/snake.svg" alt="snake eating contributions" width="100%"/>
 
-<sub>every card on this page regenerates daily via GitHub Actions · <code>scripts/generate.py</code></sub>
+<img src="assets/pacman.svg" alt="pac-man eating contributions" width="100%"/>
+
+<sub>every card on this page regenerates hourly via GitHub Actions · <code>scripts/generate.py</code></sub>
 
 </div>
