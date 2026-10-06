@@ -178,7 +178,8 @@ def ascii_portrait(avatar_url, cols=120, rows=72):
         with urllib.request.urlopen(avatar_url) as r:
             img = Image.open(io.BytesIO(r.read()))
     img = img.convert("L").filter(ImageFilter.UnsharpMask(2, 180, 2))
-    img = ImageOps.equalize(img).resize((cols, rows), Image.LANCZOS)
+    img = ImageOps.equalize(img).point(lambda v: int(255 * (v / 255) ** 0.75))  # lift shadows in the hair
+    img = img.resize((cols, rows), Image.LANCZOS)
     # bright pixels -> dense glyphs, since the card background is dark
     ramp = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
     px = img.load()
@@ -199,9 +200,12 @@ def whoami_svg(avatar_url, total, s):
     lh = 4.8
 
     def tint(v):
-        v = v // 16 * 16 + 8  # quantize so neighbouring glyphs share one <tspan>
-        g = int(30 + v * 0.88)
-        return f"#{int(g * 0.55):02x}{g:02x}{int(g * 0.6):02x}"
+        # dark -> green midtones (hair) -> light gray highlights (skin)
+        v = v // 12 * 12 + 6  # quantize so neighbouring glyphs share one <tspan>
+        t = v / 255
+        lo, mid, hi = (30, 36, 44), (35, 134, 54), (230, 237, 243)
+        a, b, k = (lo, mid, t / 0.45) if t < 0.45 else (mid, hi, (t - 0.45) / 0.55)
+        return "#" + "".join(f"{int(a[i] + (b[i] - a[i]) * k):02x}" for i in range(3))
 
     for i, line in enumerate(lines):
         runs = []
@@ -213,7 +217,7 @@ def whoami_svg(avatar_url, total, s):
                 runs.append((c, [ch]))
         spans = "".join(f'<tspan fill="{c}">{escape("".join(chs))}</tspan>' for c, chs in runs)
         body.append(
-            f'<text x="{px0 + pw / 2}" y="{py0 + 30 + i * lh}" font-size="5.3" '
+            f'<text x="{px0 + pw / 2}" y="{py0 + 27 + i * lh}" font-size="5.3" '
             f'text-anchor="middle" xml:space="preserve">{spans}</text>'
         )
     # stats panel
