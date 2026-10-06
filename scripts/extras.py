@@ -45,55 +45,110 @@ def _shade(hex_color, k):
 
 
 def city_svg(total, weeks, s):
+    """Ulaanbaatar at night: one tower per day of contributions, Bogd Khan ridge behind, lit windows."""
+    import random
+
     w, h = 900, 440
-    cw = 8.6  # half-width of a tile in screen space
-    ox, oy = w / 2 + 40 - (len(weeks) - 7) / 2 * cw, 150
+    sx, bw, dx, dy = 13.4, 10.0, 4.0, 4.5  # week spacing, tower width, depth offset per weekday row
+    x0, gy = (w - (len(weeks) * sx + 7 * dx)) / 2, 398
     days = [(wi, d) for wi, week in enumerate(weeks) for d in week["contributionDays"]]
     mx = max((d["contributionCount"] for _, d in days), default=1) or 1
+    rnd = random.Random(8855)
+    pts = lambda ps: " ".join(f"{x:.1f},{y:.1f}" for x, y in ps)
     body = [prompt(w / 2, 60, "./contributions.sh --city ulaanbaatar", "middle")]
+
+    # night sky: stars + moon
+    body.append('<g fill="#c9d1d9">')
+    for _ in range(70):
+        sx_, sy_ = rnd.uniform(20, w - 20), rnd.uniform(140, 300)
+        tw = f'<animate attributeName="opacity" values="0.15;0.7;0.15" dur="{rnd.uniform(2, 5):.1f}s" repeatCount="indefinite"/>' if rnd.random() < 0.3 else ""
+        body.append(f'<circle cx="{sx_:.0f}" cy="{sy_:.0f}" r="{rnd.choice((0.6, 0.8, 1.1))}" opacity="0.35">{tw}</circle>')
+    body.append("</g>")
+    body.append(
+        f'<mask id="moon"><circle cx="150" cy="190" r="15" fill="#fff"/><circle cx="157" cy="185" r="13" fill="#000"/></mask>'
+        f'<circle cx="150" cy="190" r="15" fill="{GOLD}" mask="url(#moon)" opacity="0.9"/>'
+    )
+
+    # Bogd Khan ridge behind the city
+    back = gy - 7 * dy
+    ridge = []
+    for x in range(0, w + 1, 6):
+        y = max(hh * max(0.0, 1 - abs(x - px) / pw) for px, hh, pw in [(140, 70, 200), (400, 55, 180), (640, 95, 240), (850, 60, 170)])
+        y += 1.6 * (math.sin(x / 11.0) + 0.6 * math.sin(x / 5.3 + 1))
+        ridge.append(f"{x},{back - 6 - max(0, y):.1f}")
+    body.append(
+        f'<path d="M0,{back} L{" L".join(ridge)} L{w},{back} Z" fill="{PANEL}"/>'
+        f'<path d="M{" L".join(ridge)}" fill="none" stroke="{GOLD}" stroke-opacity="0.35" stroke-width="1.2"/>'
+    )
+
+    # ground plane with street grid
+    xe = x0 + len(weeks) * sx
+    body.append(f'<polygon points="{pts([(x0 - 6, gy + 2), (xe + 2, gy + 2), (xe + 7 * dx + 4, back - 1), (x0 + 7 * dx - 2, back - 1)])}" fill="#1c2128"/>')
+
     tiles = []
     for wi, d in days:
-        row = (dt.date.fromisoformat(d["date"]).weekday() + 1) % 7
+        row = (dt.date.fromisoformat(d["date"]).weekday() + 1) % 7  # 0 = Sunday, front row
         tiles.append((wi, row, d["contributionCount"], d["date"]))
-    # painter's order: back to front
-    tiles.sort(key=lambda t: t[0] + t[1])
+    tiles.sort(key=lambda t: (-t[1], t[0]))  # back rows first, then left to right
+    tallest = max(tiles, key=lambda t: t[2])
     for wi, row, n, date in tiles:
-        cx = ox + (wi - row) * cw
-        cy = oy + (wi + row) * cw * 0.5
-        lvl = 0 if n == 0 else min(4, 1 + int(3.999 * n / mx))
-        top = LEVELS[lvl] if n else "#1c2128"
-        hgt = 3 + (math.sqrt(n / mx) * 110 if n else 0)
-        left, right = _shade(top, 0.55), _shade(top, 0.75)
-        p = lambda pts: " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-        t0 = (cx, cy - hgt)
-        t1 = (cx + cw, cy + cw * 0.5 - hgt)
-        t2 = (cx, cy + cw - hgt)
-        t3 = (cx - cw, cy + cw * 0.5 - hgt)
-        b1 = (cx + cw, cy + cw * 0.5)
-        b2 = (cx, cy + cw)
-        b3 = (cx - cw, cy + cw * 0.5)
-        body.append(
-            f'<g><title>{n} contributions on {date}</title>'
-            f'<polygon points="{p([t3, t2, b2, b3])}" fill="{left}"/>'
-            f'<polygon points="{p([t2, t1, b1, b2])}" fill="{right}"/>'
-            f'<polygon points="{p([t0, t1, t2, t3])}" fill="{top}"/></g>'
-        )
-    # legend / summary
+        bx, by = x0 + wi * sx + row * dx, gy - row * dy
+        if not n:
+            continue
+        lvl = min(4, 1 + int(3.999 * n / mx))
+        front = LEVELS[lvl]
+        top, side = _shade(front, 1.35), _shade(front, 0.6)
+        hgt = 5 + math.sqrt(n / mx) * 185
+        ty = by - hgt
+        g = [f"<g><title>{n} contributions on {date}</title>"]
+        g.append(f'<polygon points="{pts([(bx + bw, by), (bx + bw + dx, by - dy), (bx + bw + dx, ty - dy), (bx + bw, ty)])}" fill="{side}"/>')
+        g.append(f'<rect x="{bx:.1f}" y="{ty:.1f}" width="{bw}" height="{hgt:.1f}" fill="{front}"/>')
+        g.append(f'<polygon points="{pts([(bx, ty), (bx + bw, ty), (bx + bw + dx, ty - dy), (bx + dx, ty - dy)])}" fill="{top}"/>')
+        wr = random.Random(date)  # stable per day
+        for fy in range(int(ty + 4), int(by - 4), 7):
+            for fx in (bx + 2, bx + 5.6):
+                if wr.random() < 0.45:
+                    blink = (
+                        f'<animate attributeName="opacity" values="0.9;0.9;0.1;0.9" dur="{wr.uniform(4, 9):.1f}s" '
+                        f'begin="{-wr.uniform(0, 9):.1f}s" repeatCount="indefinite"/>' if wr.random() < 0.12 else ""
+                    )
+                    g.append(f'<rect x="{fx:.1f}" y="{fy}" width="2.4" height="3" fill="{GOLD}" opacity="0.9">{blink}</rect>')
+        if (wi, row) == tallest[:2]:
+            ax = bx + bw / 2 + dx / 2
+            g.append(f'<line x1="{ax:.1f}" y1="{ty - dy / 2:.1f}" x2="{ax:.1f}" y2="{ty - 18:.1f}" stroke="{MUTED}" stroke-width="1"/>')
+            g.append(
+                f'<circle cx="{ax:.1f}" cy="{ty - 19:.1f}" r="2" fill="#f85149">'
+                f'<animate attributeName="opacity" values="1;0.15;1" dur="1.6s" repeatCount="indefinite"/></circle>'
+            )
+            g.append(
+                f'<text x="{ax - 8:.1f}" y="{ty - 16:.1f}" fill="{GOLD}" font-size="10" font-weight="700" text-anchor="end">'
+                f"{n} · {escape(s['best_date'])}</text>"
+            )
+        g.append("</g>")
+        body.append("".join(g))
+
+    # month labels along the front edge
+    seen = None
+    for wi, week in enumerate(weeks):
+        m = dt.date.fromisoformat(week["contributionDays"][0]["date"]).strftime("%b")
+        if m != seen and wi < len(weeks) - 2:
+            seen = m
+            body.append(f'<text x="{x0 + wi * sx:.1f}" y="{gy + 18}" fill="{MUTED}" font-size="9">{m}</text>')
+
     lines = [
         ("total", f"{total:,} contributions"),
         ("tallest", f"{s['best']} on {s['best_date']}"),
-        ("streak", f"{s['longest']} days best"),
+        ("streak", f"{s['longest']} days best · {s['current']} now"),
     ]
     for i, (k, v) in enumerate(lines):
-        y = 110 + i * 20
         body.append(
-            f'<text x="28" y="{y}" font-size="12"><tspan fill="{MUTED}">{k:<8}</tspan>'
+            f'<text x="28" y="{100 + i * 18}" font-size="12"><tspan fill="{MUTED}">{k:<8}</tspan>'
             f'<tspan fill="{GREEN}" font-weight="700" xml:space="preserve"> {escape(v)}</tspan></text>'
         )
     body.append(
-        f'<text x="{w - 28}" y="110" fill="{GOLD}" font-size="12" font-weight="700" letter-spacing="2" '
+        f'<text x="{w - 28}" y="100" fill="{GOLD}" font-size="12" font-weight="700" letter-spacing="2" '
         f'text-anchor="end">CODE CITY / ULAANBAATAR</text>'
-        f'<text x="{w - 28}" y="128" fill="{MUTED}" font-size="10" text-anchor="end">one tower per day · height = contributions</text>'
+        f'<text x="{w - 28}" y="118" fill="{MUTED}" font-size="10" text-anchor="end">one tower per day · height = contributions</text>'
     )
     return window(w, h, f"{USER.lower()} — code-city", "".join(body))
 
