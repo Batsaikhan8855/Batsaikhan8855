@@ -5,6 +5,7 @@ Imported by generate.py; shares its palette and window/prompt helpers.
 import datetime as dt
 import math
 import os
+import re
 from xml.sax.saxutils import escape
 
 from generate import BG, BORDER, GREEN, LEVELS, MUTED, PANEL, TEXT, USER, graphql, prompt, window
@@ -203,43 +204,27 @@ def habits_svg(days, s, prof):
 
 # ---------------------------------------------------------------- neofetch
 
-def _soyombo(x0, y0, sc, col):
-    """Simplified Soyombo symbol built from primitives (fire, sun, moon, triangles, bars, taijitu, pillars)."""
-    g = lambda v: v * sc
-    parts = [
-        # fire: three tongues
-        f'<path d="M{x0 + g(50)},{y0} C{x0 + g(58)},{y0 + g(12)} {x0 + g(58)},{y0 + g(20)} {x0 + g(50)},{y0 + g(28)} '
-        f'C{x0 + g(42)},{y0 + g(20)} {x0 + g(42)},{y0 + g(12)} {x0 + g(50)},{y0}Z"/>',
-        f'<path d="M{x0 + g(38)},{y0 + g(10)} C{x0 + g(44)},{y0 + g(18)} {x0 + g(44)},{y0 + g(24)} {x0 + g(42)},{y0 + g(30)} '
-        f'C{x0 + g(36)},{y0 + g(26)} {x0 + g(35)},{y0 + g(18)} {x0 + g(38)},{y0 + g(10)}Z"/>',
-        f'<path d="M{x0 + g(62)},{y0 + g(10)} C{x0 + g(56)},{y0 + g(18)} {x0 + g(56)},{y0 + g(24)} {x0 + g(58)},{y0 + g(30)} '
-        f'C{x0 + g(64)},{y0 + g(26)} {x0 + g(65)},{y0 + g(18)} {x0 + g(62)},{y0 + g(10)}Z"/>',
-        # sun
-        f'<circle cx="{x0 + g(50)}" cy="{y0 + g(40)}" r="{g(8)}"/>',
-        # moon (crescent)
-        f'<path d="M{x0 + g(36)},{y0 + g(52)} A{g(14)},{g(10)} 0 0 0 {x0 + g(64)},{y0 + g(52)} '
-        f'A{g(14)},{g(6)} 0 0 1 {x0 + g(36)},{y0 + g(52)}Z"/>',
-        # top triangle + bar
-        f'<polygon points="{x0 + g(36)},{y0 + g(66)} {x0 + g(64)},{y0 + g(66)} {x0 + g(50)},{y0 + g(76)}"/>',
-        f'<rect x="{x0 + g(36)}" y="{y0 + g(79)}" width="{g(28)}" height="{g(4)}"/>',
-        # taijitu
-        f'<circle cx="{x0 + g(50)}" cy="{y0 + g(98)}" r="{g(12)}" fill="none" stroke="{col}" stroke-width="{g(2)}"/>',
-        f'<path d="M{x0 + g(50)},{y0 + g(86)} A{g(6)},{g(6)} 0 0 1 {x0 + g(50)},{y0 + g(98)} '
-        f'A{g(6)},{g(6)} 0 0 0 {x0 + g(50)},{y0 + g(110)} A{g(12)},{g(12)} 0 0 1 {x0 + g(50)},{y0 + g(86)}Z"/>',
-        # bottom bar + triangle
-        f'<rect x="{x0 + g(36)}" y="{y0 + g(113)}" width="{g(28)}" height="{g(4)}"/>',
-        f'<polygon points="{x0 + g(36)},{y0 + g(120)} {x0 + g(64)},{y0 + g(120)} {x0 + g(50)},{y0 + g(130)}"/>',
-        # pillars
-        f'<rect x="{x0 + g(26)}" y="{y0 + g(66)}" width="{g(5)}" height="{g(64)}"/>',
-        f'<rect x="{x0 + g(69)}" y="{y0 + g(66)}" width="{g(5)}" height="{g(64)}"/>',
-    ]
-    return f'<g fill="{col}">{"".join(parts)}</g>'
+SOYOMBO = os.path.join(os.path.dirname(__file__), "..", "assets", "soyombo.svg")
+
+
+def _soyombo(x0, y0, height, col):
+    """The Soyombo (solid-sun variant, traced from Wikimedia Commons) as a nested <svg>."""
+    with open(SOYOMBO) as f:
+        src = f.read()
+    vb = re.search(r'viewBox="([^"]+)"', src).group(1)
+    d = re.search(r' d="([^"]+)"', src).group(1)
+    _, _, vw, vh = (float(v) for v in vb.split())
+    width = height * vw / vh
+    return (
+        f'<svg x="{x0:.1f}" y="{y0:.1f}" width="{width:.1f}" height="{height:.1f}" viewBox="{vb}">'
+        f'<path fill="{col}" fill-rule="evenodd" d="{d}"/></svg>'
+    )
 
 
 def neofetch_svg(total, s, prof):
     w, h = 900, 370
     body = [prompt(w / 2, 60, "neofetch", "middle")]
-    body.append(_soyombo(70, 88, 1.65, "#f2c94c"))
+    body.append(_soyombo(80, 92, 240, "#f2c94c"))
     now = dt.datetime.now(dt.timezone.utc)
     months = (now.year - prof["created"].year) * 12 + now.month - prof["created"].month
     uptime = f"{months // 12} years, {months % 12} months" if months >= 12 else f"{months} months"

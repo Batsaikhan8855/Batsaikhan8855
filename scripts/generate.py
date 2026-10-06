@@ -335,13 +335,13 @@ def _header_sides(w, h):
         with open(path, "rb") as f:
             uri = "data:image/png;base64," + base64.b64encode(f.read()).decode()
         out.append(f'<image x="{34 - iw / 2:.1f}" y="20" width="{iw:.1f}" height="{ih}" href="{uri}"/>')
-    sc = (h - 50) / 130
-    out.append(_soyombo(w - 34 - 50 * sc, 25, sc, "#f2c94c"))
+    sh = 118
+    out.append(_soyombo(w - 40 - sh * 172 / 312 / 2, (h - sh) / 2, sh, "#f2c94c"))
     return "".join(out)
 
 
 def header_svg(name="BATSAIKHAN"):
-    px, gap = 10, 0
+    px, gap = 9.4, 0
     cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
     w = 900
     gx0 = (w - cols * px) / 2
