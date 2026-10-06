@@ -5,14 +5,16 @@ Outputs:
   assets/whoami.svg         - `whoami` panel: ASCII portrait + stats + monthly bars
   assets/header.svg         - block-letter name banner with a typing tagline
   assets/activity.svg       - `git log` of recent commits + language breakdown
-  assets/city.svg, habits.svg, neofetch.svg - see extras.py
+  assets/city.svg, habits.svg, neofetch.svg, ub.svg, wakatime.svg, ... - see extras.py
+  assets/light/*.svg        - the same cards recoloured for GitHub's light theme
 
-Requires env GH_TOKEN (or GITHUB_TOKEN) and optionally GH_USER.
+Requires env GH_TOKEN (or GITHUB_TOKEN); optional GH_USER and WAKATIME_API_KEY.
 """
 import datetime as dt
 import io
 import json
 import os
+import re
 import urllib.request
 from collections import OrderedDict
 from xml.sax.saxutils import escape
@@ -30,7 +32,31 @@ TEXT = "#c9d1d9"
 MUTED = "#8b949e"
 GREEN = "#3fb950"
 LEVELS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"]
+# light-theme counterparts (GitHub light palette); every card is also written to assets/light/
+LIGHT = {
+    "#0d1117": "#ffffff", "#161b22": "#f6f8fa", "#1c2128": "#eaeef2", "#21262d": "#eaeef2",
+    "#30363d": "#d0d7de", "#484f58": "#8c959f", "#8b949e": "#59636e", "#c0c8d0": "#8c959f",
+    "#c9d1d9": "#1f2328", "#e6edf3": "#1f2328", "#ffffff0d": "#1f232814",
+    "#3fb950": "#1a7f37", "#2ea043": "#1a7f37", "#56d364": "#2da44e", "#7ee787": "#116329",
+    "#1a7f37": "#4ac26b", "#238636": "#2da44e",
+    "#0e4429": "#9be9a8", "#006d32": "#40c463", "#26a641": "#30a14e", "#39d353": "#216e39",
+    "#58a6ff": "#0969da", "#d29922": "#9a6700", "#f85149": "#cf222e", "#39c5cf": "#1b7c83",
+    "#bc8cff": "#8250df", "#f2c94c": "#bf8700",
+}
 FONT = "ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace"
+
+
+def to_light(svg):
+    return re.sub(r"#[0-9a-fA-F]{3,8}\b", lambda m: LIGHT.get(m.group(0).lower(), m.group(0)), svg)
+
+
+def write_card(name, svg):
+    """Write the dark card to assets/ and its light twin to assets/light/."""
+    os.makedirs(os.path.join(OUT, "light"), exist_ok=True)
+    with open(os.path.join(OUT, name), "w") as f:
+        f.write(svg)
+    with open(os.path.join(OUT, "light", name), "w") as f:
+        f.write(to_light(svg))
 
 
 def graphql(query, variables):
@@ -474,29 +500,21 @@ def main():
         raise SystemExit("GH_TOKEN is required")
     avatar, total, weeks, days = fetch()
     s = stats(days)
-    os.makedirs(OUT, exist_ok=True)
-    with open(os.path.join(OUT, "contributions.svg"), "w") as f:
-        f.write(contributions_svg(total, weeks))
-    with open(os.path.join(OUT, "whoami.svg"), "w") as f:
-        f.write(whoami_svg(avatar, total, s))
-    with open(os.path.join(OUT, "header.svg"), "w") as f:
-        f.write(header_svg())
-    with open(os.path.join(OUT, "activity.svg"), "w") as f:
-        f.write(activity_svg(fetch_repos()))
+    write_card("contributions.svg", contributions_svg(total, weeks))
+    write_card("whoami.svg", whoami_svg(avatar, total, s))
+    write_card("header.svg", header_svg())
+    write_card("activity.svg", activity_svg(fetch_repos()))
 
     import extras  # imported late: extras reuses this module's helpers
 
     prof = extras.fetch_profile()
-    for name, svg in (
-        ("city.svg", extras.city_svg(total, weeks, s)),
-        ("habits.svg", extras.habits_svg(days, s, prof)),
-        ("neofetch.svg", extras.neofetch_svg(total, s, prof)),
-        ("ub.svg", extras.ub_svg(extras.fetch_weather())),
-        ("pacman.svg", extras.pacman_svg(weeks)),
-        ("projects.svg", extras.projects_svg(os.path.join(OUT, "shots"))),
-    ):
-        with open(os.path.join(OUT, name), "w") as f:
-            f.write(svg)
+    write_card("city.svg", extras.city_svg(total, weeks, s))
+    write_card("habits.svg", extras.habits_svg(days, s, prof))
+    write_card("neofetch.svg", extras.neofetch_svg(total, s, prof))
+    write_card("ub.svg", extras.ub_svg(extras.fetch_weather()))
+    write_card("wakatime.svg", extras.wakatime_svg(extras.fetch_wakatime()))
+    write_card("pacman.svg", extras.pacman_svg(weeks))
+    write_card("projects.svg", extras.projects_svg(os.path.join(OUT, "shots")))
     print(f"total={total} current={s['current']} longest={s['longest']} active={s['active']}")
 
 

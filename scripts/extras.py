@@ -321,6 +321,32 @@ PROVERBS = [
 ]
 
 
+# who says the proverb today: a ger, a Bactrian camel or the classic cow (max 5 lines)
+SAYERS = [
+    [
+        r"        \        _/\_",
+        r"         \     /`    `\ ",
+        r"             /__________\ ",
+        r"             |  |    |  |",
+        r"             |__|_[]_|__|",
+    ],
+    [
+        r"        \       __    __",
+        r"         \     /  \__/  \     _",
+        r"            __/          \___/ o\ ",
+        r"           /                  __/",
+        r"           \_|_|-------|_|_|",
+    ],
+    [
+        r"        \   ^__^",
+        r"         \  (oo)\_______",
+        r"            (__)\       )\/\ ",
+        r"                ||----w |",
+        r"                ||     ||",
+    ],
+]
+
+
 def _wrap(text, width):
     lines, cur = [], ""
     for word in text.split():
@@ -334,7 +360,7 @@ def _wrap(text, width):
 
 def ub_svg(weather):
     w, h = 900, 330
-    body = [prompt(w / 2, 60, "curl wttr.in/ulaanbaatar && fortune mn | cowsay", "middle")]
+    body = [prompt(w / 2, 60, "curl wttr.in/ulaanbaatar && fortune mn | mongolsay", "middle")]
     # weather panel
     px0, py0, pw, ph = 20, 80, 420, 230
     body.append(f'<rect x="{px0}" y="{py0}" width="{pw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
@@ -384,13 +410,7 @@ def ub_svg(weather):
         lo, hi = ("/", bs) if i == 0 else (bs, "/") if i == len(text) - 1 else ("|", "|")
         bubble.append(f"{lo} {l.ljust(width)} {hi}")
     bubble.append(" " + "-" * (width + 2))
-    cow = [
-        r"        \   ^__^",
-        r"         \  (oo)\_______",
-        r"            (__)\       )\/\ ",
-        r"                ||----w |",
-        r"                ||     ||",
-    ]
+    cow = SAYERS[today.toordinal() % len(SAYERS)]
     fs, lh = 11, 13
     for i, l in enumerate(bubble + cow):
         y = py0 + 38 + i * lh
@@ -457,7 +477,7 @@ def pacman_svg(weeks):
         ghost = (
             f'<path d="M-7,7 L-7,-1 A7,7 0 0,1 7,-1 L7,7 L4.5,4.5 L2,7 L0,4.5 L-2,7 L-4.5,4.5 Z" fill="{gc}"/>'
             f'<circle cx="-2.5" cy="-1" r="2" fill="#fff"/><circle cx="2.5" cy="-1" r="2" fill="#fff"/>'
-            f'<circle cx="-2" cy="-1" r="1" fill="#0d1117"/><circle cx="3" cy="-1" r="1" fill="#0d1117"/>'
+            f'<circle cx="-2" cy="-1" r="1" fill="#010409"/><circle cx="3" cy="-1" r="1" fill="#010409"/>'
         )
         k0 = lag / T
         body.append(
@@ -485,7 +505,7 @@ def _data_uri(path, mime):
 
 
 def projects_svg(shots_dir):
-    w, h = 900, 400
+    w, h = 900, 420
     body = [prompt(w / 2, 60, "open ./projects --live", "middle")]
     pw, gap = 420, 20
     for i, (name, host, _link, desc, stack) in enumerate(PROJECTS):
@@ -520,3 +540,81 @@ def projects_svg(shots_dir):
             f'<text x="{x0 + pw - 18}" y="{y0 + 20}" font-size="10" fill="{GREEN}" text-anchor="end">live</text>'
         )
     return window(w, h, f"{USER.lower()} — projects", "".join(body))
+
+
+# ---------------------------------------------------------------- WakaTime coding time (last 7 days)
+
+def fetch_wakatime():
+    """Last-7-days stats, or None when WAKATIME_API_KEY is unset or the API has nothing yet."""
+    import base64
+    import json
+    import urllib.request
+
+    key = os.environ.get("WAKATIME_API_KEY")
+    if not key:
+        return None
+    req = urllib.request.Request(
+        "https://wakatime.com/api/v1/users/current/stats/last_7_days",
+        headers={"Authorization": "Basic " + base64.b64encode(key.encode()).decode()},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = json.load(r).get("data") or {}
+    except Exception as e:  # a WakaTime outage must not break the other cards
+        print(f"wakatime: {e}")
+        return None
+    return data if data.get("languages") else None
+
+
+WAKA_COLORS = ["#3fb950", "#58a6ff", "#d29922", "#bc8cff", "#39c5cf", "#f85149"]
+
+
+def wakatime_svg(data):
+    w, h = 900, 300
+    body = [prompt(w / 2, 60, "wakatime --today --last-7-days", "middle")]
+    px0, py0, ph = 20, 80, 200
+    if not data:
+        body.append(f'<rect x="{px0}" y="{py0}" width="{w - 40}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+        body.append(
+            f'<text x="{w / 2}" y="{py0 + ph / 2}" fill="{MUTED}" font-size="13" text-anchor="middle">'
+            f"collecting coding stats… check back soon</text>"
+        )
+        return window(w, h, f"{USER.lower()} — wakatime", "".join(body))
+    # summary tiles
+    sw = 260
+    body.append(f'<rect x="{px0}" y="{py0}" width="{sw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+    body.append(f'<text x="{px0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">summary.json</text>')
+    best = data.get("best_day") or {}
+    tiles = [
+        ("coded this week", data.get("human_readable_total") or "0 secs", True),
+        ("daily average", data.get("human_readable_daily_average") or "0 secs", False),
+        ("best day", f"{best.get('text', '-')}", False),
+    ]
+    for i, (label, val, hi) in enumerate(tiles):
+        ty = py0 + 30 + i * 54
+        body.append(
+            f'<rect x="{px0 + 14}" y="{ty}" width="{sw - 28}" height="46" rx="6" fill="{BG}" stroke="{BORDER}"/>'
+            f'<text x="{px0 + 24}" y="{ty + 16}" fill="{MUTED}" font-size="10">$ {escape(label)}</text>'
+            f'<text x="{px0 + 24}" y="{ty + 36}" font-size="16" font-weight="700" fill="{GREEN if hi else TEXT}">{escape(val)}</text>'
+        )
+    # languages
+    lx0 = px0 + sw + 20
+    lw = w - lx0 - 20
+    body.append(f'<rect x="{lx0}" y="{py0}" width="{lw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+    body.append(f'<text x="{lx0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">languages (last 7 days)</text>')
+    langs = [l for l in data["languages"] if l.get("total_seconds", 0) > 0][:6]
+    top = max((l.get("percent", 0) for l in langs), default=0) or 1
+    bx, bw = lx0 + 130, lw - 130 - 120
+    for i, l in enumerate(langs):
+        y = py0 + 44 + i * 25
+        col = WAKA_COLORS[i % len(WAKA_COLORS)]
+        bar = max(2, bw * l.get("percent", 0) / top)
+        body.append(
+            f'<text x="{lx0 + 14}" y="{y}" font-size="12" fill="{TEXT}">{escape(l.get("name", "?")[:14])}</text>'
+            f'<rect x="{bx}" y="{y - 10}" width="{bw}" height="10" rx="3" fill="{BG}"/>'
+            f'<rect x="{bx}" y="{y - 10}" width="{bar:.1f}" height="10" rx="3" fill="{col}">'
+            f'<animate attributeName="width" from="0" to="{bar:.1f}" begin="{0.3 + i * 0.1:.1f}s" dur="0.6s" fill="freeze"/></rect>'
+            f'<text x="{lx0 + lw - 14}" y="{y}" font-size="11" fill="{MUTED}" text-anchor="end">'
+            f'{escape(l.get("text", ""))}</text>'
+        )
+    return window(w, h, f"{USER.lower()} — wakatime", "".join(body))
