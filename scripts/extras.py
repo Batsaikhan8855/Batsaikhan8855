@@ -494,7 +494,7 @@ PROJECTS = [
     ("100ail", "100ail.vercel.app",
      "BarilgaHUB — construction materials marketplace", "NestJS · Next.js · PostgreSQL", True),
     ("sporthub", "sporthub-eight.vercel.app",
-     "SportHub Mongolia — one membership for every sport", "Next.js · TypeScript · Supabase", True),
+     "SportHub Mongolia — one membership for every sport", "NestJS · React · PostgreSQL · Railway", True),
     ("gymhub", "gymhubmn.vercel.app",
      "GymHub — one membership for 30+ fitness clubs", "Next.js · TypeScript", False),
     ("sparkxp", "spark-xp-web.vercel.app",
