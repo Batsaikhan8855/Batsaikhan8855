@@ -9,29 +9,17 @@
 
 <img src="assets/contributions.svg" alt="contributions" width="100%"/>
 
+<img src="assets/city.svg" alt="3D contribution city" width="100%"/>
+
 <img src="assets/whoami.svg" alt="whoami" width="100%"/>
 
 <img src="assets/activity.svg" alt="recent activity" width="100%"/>
 
+<img src="assets/habits.svg" alt="commit clock and achievements" width="100%"/>
+
+<img src="assets/neofetch.svg" alt="neofetch" width="100%"/>
+
 <br/>
-
-```console
-batsaikhan8855@github ~ $ cat about.yml
-```
-
-</div>
-
-```yaml
-name:      Batsaikhan
-role:      Full-stack developer
-building:  marketplaces, web apps & games
-stack:
-  frontend: [TypeScript, Next.js, React]
-  backend:  [NestJS, Node.js, Python]
-  other:    [Unity, C#, PostgreSQL, Supabase, Railway, Vercel]
-```
-
-<div align="center">
 
 ```console
 batsaikhan8855@github ~ $ ls ./projects

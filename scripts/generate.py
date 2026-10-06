@@ -5,6 +5,7 @@ Outputs:
   assets/whoami.svg         - `whoami` panel: ASCII portrait + stats + monthly bars
   assets/header.svg         - block-letter name banner with a typing tagline
   assets/activity.svg       - `git log` of recent commits + language breakdown
+  assets/city.svg, habits.svg, neofetch.svg - see extras.py
 
 Requires env GH_TOKEN (or GITHUB_TOKEN) and optionally GH_USER.
 """
@@ -433,6 +434,17 @@ def main():
         f.write(header_svg())
     with open(os.path.join(OUT, "activity.svg"), "w") as f:
         f.write(activity_svg(fetch_repos()))
+
+    import extras  # imported late: extras reuses this module's helpers
+
+    prof = extras.fetch_profile()
+    for name, svg in (
+        ("city.svg", extras.city_svg(total, weeks, s)),
+        ("habits.svg", extras.habits_svg(days, s, prof)),
+        ("neofetch.svg", extras.neofetch_svg(total, s, prof)),
+    ):
+        with open(os.path.join(OUT, name), "w") as f:
+            f.write(svg)
     print(f"total={total} current={s['current']} longest={s['longest']} active={s['active']}")
 
 
