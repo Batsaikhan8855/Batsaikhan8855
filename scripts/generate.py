@@ -16,7 +16,7 @@ import urllib.request
 from collections import OrderedDict
 from xml.sax.saxutils import escape
 
-from PIL import Image, ImageOps, ImageEnhance
+from PIL import Image, ImageFilter, ImageOps
 
 USER = os.environ.get("GH_USER", "Batsaikhan8855")
 TOKEN = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
@@ -170,14 +170,15 @@ def contributions_svg(total, weeks):
 PORTRAIT_SRC = os.path.join(OUT, "portrait-source.png")
 
 
-def ascii_portrait(avatar_url, cols=74, rows=44):
+def ascii_portrait(avatar_url, cols=120, rows=72):
     """Return rows of (char, brightness) pairs, from a face-cropped source if present."""
     if os.path.exists(PORTRAIT_SRC):
         img = Image.open(PORTRAIT_SRC)
     else:
         with urllib.request.urlopen(avatar_url) as r:
             img = Image.open(io.BytesIO(r.read()))
-    img = ImageOps.equalize(img.convert("L")).resize((cols, rows))
+    img = img.convert("L").filter(ImageFilter.UnsharpMask(2, 180, 2))
+    img = ImageOps.equalize(img).resize((cols, rows), Image.LANCZOS)
     # bright pixels -> dense glyphs, since the card background is dark
     ramp = " .'`^\",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
     px = img.load()
@@ -195,15 +196,24 @@ def whoami_svg(avatar_url, total, s):
     body.append(f'<rect x="{px0}" y="{py0}" width="{pw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
     body.append(f'<text x="{px0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">portrait.txt</text>')
     lines = ascii_portrait(avatar_url)
-    lh = 7.6
+    lh = 4.8
+
+    def tint(v):
+        v = v // 16 * 16 + 8  # quantize so neighbouring glyphs share one <tspan>
+        g = int(30 + v * 0.88)
+        return f"#{int(g * 0.55):02x}{g:02x}{int(g * 0.6):02x}"
+
     for i, line in enumerate(lines):
-        spans = "".join(
-            f'<tspan fill="rgb({int((40 + v * 0.85) * 0.55)},{int(40 + v * 0.85)},{int((40 + v * 0.85) * 0.6)})">'
-            f"{escape(ch)}</tspan>"
-            for ch, v in line
-        )
+        runs = []
+        for ch, v in line:
+            c = tint(v)
+            if runs and runs[-1][0] == c:
+                runs[-1][1].append(ch)
+            else:
+                runs.append((c, [ch]))
+        spans = "".join(f'<tspan fill="{c}">{escape("".join(chs))}</tspan>' for c, chs in runs)
         body.append(
-            f'<text x="{px0 + pw / 2}" y="{py0 + 34 + i * lh}" font-size="8.6" '
+            f'<text x="{px0 + pw / 2}" y="{py0 + 30 + i * lh}" font-size="5.3" '
             f'text-anchor="middle" xml:space="preserve">{spans}</text>'
         )
     # stats panel
