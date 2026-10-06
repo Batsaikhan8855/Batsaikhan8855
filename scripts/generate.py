@@ -1,7 +1,7 @@
 """Generate the terminal-style SVG cards of the BATSAIKHANN OS profile README.
 
 Outputs (assets/):
-  hero.svg         `./welcome.sh` banner: name, typing tagline, Soyombo, Bogd Khan ridge
+  hero.svg         `./welcome.sh` banner: name, typing tagline, Mongolian-script name, Bogd Khan ridge
   whoami.svg       ASCII portrait + identity
   shipping.svg     `git log --shipping`: latest real commits + language breakdown
   neofetch.svg, mission.svg, city.svg, achievements.svg, projects.svg, ub.svg, footer.svg - see extras.py
@@ -307,23 +307,28 @@ def bogd_khan(w, h):
     )
 
 
-def _mongol_name(x, y, height):
-    """The name in traditional Mongolian script (pre-rendered PNG, embedded)."""
+def _mongol_name(x, y, height, col):
+    """The name in traditional Mongolian script, drawn in `col` through the PNG's alpha as a mask."""
     import base64
 
     path = os.path.join(OUT, "mongol-name.png")
     if not os.path.exists(path):
         return ""
-    img = Image.open(path)
+    img = Image.open(path).convert("RGBA")
+    white = Image.new("RGBA", img.size, (255, 255, 255, 0))
+    white.putalpha(img.getchannel("A"))  # white glyphs on transparent: a clean luminance mask
+    buf = io.BytesIO()
+    white.save(buf, "PNG", optimize=True)
+    uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
     iw = img.width * height / img.height
-    with open(path, "rb") as f:
-        uri = "data:image/png;base64," + base64.b64encode(f.read()).decode()
-    return f'<image x="{x - iw / 2:.1f}" y="{y}" width="{iw:.1f}" height="{height}" href="{uri}"/>'
+    x0 = x - iw / 2
+    return (
+        f'<mask id="mn"><image x="{x0:.1f}" y="{y}" width="{iw:.1f}" height="{height}" href="{uri}"/></mask>'
+        f'<rect x="{x0:.1f}" y="{y}" width="{iw:.1f}" height="{height}" fill="{col}" mask="url(#mn)"/>'
+    )
 
 
 def hero_svg(name="BATSAIKHAN"):
-    from extras import _soyombo
-
     w, h, px = 900, 340, 8.6
     cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
     gx0, gy0 = (w - cols * px) / 2, 92
@@ -387,8 +392,7 @@ def hero_svg(name="BATSAIKHAN"):
         f'<text x="{w / 2}" y="{sub_y}" fill="{MUTED}" font-size="13" text-anchor="middle">'
         f"building products · shipping ideas · breaking things · fixing them</text>"
         f"{info_svg}"
-        f'{_mongol_name(50, side_y - 8, side + 16)}'
-        f'{_soyombo(w - 50 - side * 172 / 312 / 2, side_y, side, GOLD)}'
+        f'{_mongol_name(50, side_y - 8, side + 16, GREEN)}'
     )
     return window(w, h, f"{USER.lower()} — welcome.sh", body)
 
