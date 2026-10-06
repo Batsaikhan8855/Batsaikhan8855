@@ -3,6 +3,8 @@
 Outputs:
   assets/contributions.svg  - `./contributions.sh` heatmap of the last year
   assets/whoami.svg         - `whoami` panel: ASCII portrait + stats + monthly bars
+  assets/header.svg         - block-letter name banner with a typing tagline
+  assets/activity.svg       - `git log` of recent commits + language breakdown
 
 Requires env GH_TOKEN (or GITHUB_TOKEN) and optionally GH_USER.
 """
@@ -51,6 +53,15 @@ def fetch():
     cal = u["contributionsCollection"]["contributionCalendar"]
     days = [d for w in cal["weeks"] for d in w["contributionDays"]]
     return u["avatarUrl"], cal["totalContributions"], cal["weeks"], days
+
+
+def fetch_repos():
+    q = """query($login:String!){user(login:$login){repositories(first:30,ownerAffiliations:OWNER,
+      privacy:PUBLIC,isFork:false,orderBy:{field:PUSHED_AT,direction:DESC}){nodes{name
+        languages(first:10,orderBy:{field:SIZE,direction:DESC}){edges{size node{name color}}}
+        defaultBranchRef{target{... on Commit{history(first:15){nodes{abbreviatedOid messageHeadline
+          committedDate additions deletions author{user{login}}}}}}}}}}}"""
+    return graphql(q, {"login": USER})["user"]["repositories"]["nodes"]
 
 
 def stats(days):
@@ -232,6 +243,153 @@ def whoami_svg(avatar_url, total, s):
     return window(w, h, f"{USER.lower()} — whoami", "".join(body))
 
 
+# ANSI-Shadow-style glyphs drawn as pixel blocks; the shadow is rendered as an offset copy
+GLYPHS = {
+    "A": [" ##### ", "##   ##", "#######", "##   ##", "##   ##"],
+    "B": ["###### ", "##   ##", "###### ", "##   ##", "###### "],
+    "H": ["##   ##", "##   ##", "#######", "##   ##", "##   ##"],
+    "I": ["##", "##", "##", "##", "##"],
+    "K": ["##   ##", "##  ## ", "#####  ", "##  ## ", "##   ##"],
+    "N": ["###   ##", "####  ##", "## ## ##", "##  ####", "##   ###"],
+    "S": [" ######", "##     ", " ##### ", "     ##", "###### "],
+    "T": ["########", "   ##   ", "   ##   ", "   ##   ", "   ##   "],
+}
+
+TAGLINES = [
+    "Full-stack developer",
+    "Building marketplaces with NestJS + Next.js",
+    "Shipping web apps, maps & games",
+    "Always learning, always shipping",
+]
+
+
+def header_svg(name="BATSAIKHAN"):
+    px, gap = 11, 0
+    cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
+    w = 900
+    gx0 = (w - cols * px) / 2
+    gy0 = 40
+    shadow, front = [], []
+    x = 0
+    for c in name:
+        g = GLYPHS[c]
+        for r, row in enumerate(g):
+            for k, ch in enumerate(row):
+                if ch == "#":
+                    cx, cy = gx0 + (x + k) * px, gy0 + r * px
+                    shadow.append(f'<rect x="{cx + 4}" y="{cy + 4}" width="{px}" height="{px}"/>')
+                    front.append(f'<rect x="{cx}" y="{cy}" width="{px + 0.5}" height="{px + 0.5}"/>')
+        x += len(g[0]) + 1
+    h = 190
+    ty = gy0 + 5 * px + 50
+    # each tagline types in, holds, then erases; lines are chained so exactly one is visible at a time
+    per = 4.0
+    total = per * len(TAGLINES)
+    lines = []
+    for i, t in enumerate(TAGLINES):
+        tw = len(t) * 9.65 + 4
+        start, end = i * per / total, (i + 1) * per / total
+        typed = start + 1.4 / total
+        hold = end - 0.6 / total
+        kt = f"0;{start:.4f};{typed:.4f};{hold:.4f};{end:.4f};1"
+        lines.append(
+            f'<clipPath id="c{i}"><rect x="{(w - tw) / 2}" y="{ty - 18}" height="26" width="0">'
+            f'<animate attributeName="width" dur="{total}s" repeatCount="indefinite" '
+            f'keyTimes="{kt}" values="0;0;{tw};{tw};0;0"/></rect></clipPath>'
+            f'<text x="{w / 2}" y="{ty}" fill="{TEXT}" font-size="16" text-anchor="middle" '
+            f'clip-path="url(#c{i})">{escape(t)}</text>'
+        )
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="{FONT}">'
+        f'<defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="{gx0}" x2="{gx0 + cols * px}" y1="0" y2="0"><stop offset="0" stop-color="#2ea043"/>'
+        f'<stop offset="0.5" stop-color="#56d364"/><stop offset="1" stop-color="#2ea043"/></linearGradient>'
+        f'<linearGradient id="shine"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+        f'<stop offset="0.5" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
+        f'</linearGradient><clipPath id="letters">{"".join(front)}</clipPath></defs>'
+        f'<rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="{BG}" stroke="{BORDER}"/>'
+        f'<g fill="#0e4429">{"".join(shadow)}</g><g fill="url(#g)">{"".join(front)}</g>'
+        f'<g clip-path="url(#letters)"><rect x="-200" y="0" width="160" height="{h}" fill="url(#shine)">'
+        f'<animate attributeName="x" values="-200;{w + 40}" dur="3.5s" repeatCount="indefinite"/></rect></g>'
+        f'{"".join(lines)}</svg>'
+    )
+
+
+def rel_time(iso):
+    d = dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    for unit, sec in (("y", 31536000), ("mo", 2592000), ("d", 86400), ("h", 3600), ("m", 60)):
+        if d.total_seconds() >= sec:
+            return f"{int(d.total_seconds() // sec)}{unit} ago"
+    return "just now"
+
+
+def activity_svg(repos):
+    w, h = 900, 330
+    body = [prompt(w / 2, 60, "git log --all --oneline | head", "middle")]
+    # git log panel
+    lx0, ly0, lw, lh = 20, 80, 540, 230
+    body.append(f'<rect x="{lx0}" y="{ly0}" width="{lw}" height="{lh}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+    body.append(f'<text x="{lx0 + 12}" y="{ly0 + 18}" fill="{MUTED}" font-size="10">recent-commits.log</text>')
+    commits = []
+    for r in repos:
+        if r["name"].lower() == USER.lower():
+            continue
+        target = (r.get("defaultBranchRef") or {}).get("target") or {}
+        for c in (target.get("history") or {}).get("nodes", []):
+            mine = ((c.get("author") or {}).get("user") or {}).get("login", "").lower() == USER.lower()
+            if mine and not c["messageHeadline"].startswith("Merge "):
+                commits.append((c["committedDate"], r["name"], c))
+    commits.sort(key=lambda t: t[0], reverse=True)
+    for i, (date, repo, c) in enumerate(commits[:9]):
+        y = ly0 + 42 + i * 20
+        msg = c["messageHeadline"]
+        room = 40 - len(repo)
+        if len(msg) > room:
+            msg = msg[: room - 1] + "…"
+        body.append(
+            f'<text x="{lx0 + 14}" y="{y}" font-size="12" xml:space="preserve">'
+            f'<tspan fill="#d29922">{c["abbreviatedOid"]}</tspan> '
+            f'<tspan fill="#58a6ff">{escape(repo)}</tspan><tspan fill="{MUTED}">:</tspan> '
+            f'<tspan fill="{TEXT}">{escape(msg)}</tspan></text>'
+            f'<text x="{lx0 + lw - 14}" y="{y}" font-size="11" fill="{MUTED}" text-anchor="end">'
+            f'<tspan fill="{GREEN}">+{c["additions"]}</tspan> <tspan fill="#f85149">-{c["deletions"]}</tspan>'
+            f'  {rel_time(date)}</text>'
+        )
+    if not commits:
+        body.append(f'<text x="{lx0 + 14}" y="{ly0 + 42}" font-size="12" fill="{MUTED}">no public commits yet</text>')
+    # languages panel
+    rx0, rw = lx0 + lw + 20, w - (lx0 + lw + 20) - 20
+    body.append(f'<rect x="{rx0}" y="{ly0}" width="{rw}" height="{lh}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+    body.append(f'<text x="{rx0 + 12}" y="{ly0 + 18}" fill="{MUTED}" font-size="10">languages.sh</text>')
+    sizes, colors = {}, {}
+    for r in repos:
+        for e in r["languages"]["edges"]:
+            n = e["node"]["name"]
+            sizes[n] = sizes.get(n, 0) + e["size"]
+            colors[n] = e["node"]["color"] or MUTED
+    tot = sum(sizes.values()) or 1
+    top = sorted(sizes.items(), key=lambda kv: kv[1], reverse=True)[:6]
+    # stacked bar
+    bx, bw = rx0 + 14, rw - 28
+    acc = 0
+    body.append(f'<clipPath id="bar"><rect x="{bx}" y="{ly0 + 32}" width="{bw}" height="10" rx="5"/></clipPath><g clip-path="url(#bar)">')
+    body.append(f'<rect x="{bx}" y="{ly0 + 32}" width="{bw}" height="10" fill="{BORDER}"/>')
+    for n, v in top:
+        seg = bw * v / tot
+        body.append(f'<rect x="{bx + acc}" y="{ly0 + 32}" width="{seg}" height="10" fill="{colors[n]}"/>')
+        acc += seg
+    body.append("</g>")
+    for i, (n, v) in enumerate(top):
+        y = ly0 + 68 + i * 26
+        pct = 100 * v / tot
+        body.append(
+            f'<circle cx="{bx + 5}" cy="{y - 4}" r="5" fill="{colors[n]}"/>'
+            f'<text x="{bx + 16}" y="{y}" font-size="12" fill="{TEXT}">{escape(n)}</text>'
+            f'<text x="{bx + bw}" y="{y}" font-size="12" fill="{MUTED}" text-anchor="end">{pct:.1f}%</text>'
+            f'<rect x="{bx + 16}" y="{y + 5}" width="{(bw - 16) * pct / 100}" height="3" rx="1.5" fill="{colors[n]}" opacity="0.6"/>'
+        )
+    return window(w, h, f"{USER.lower()} — activity", "".join(body))
+
+
 def main():
     if not TOKEN:
         raise SystemExit("GH_TOKEN is required")
@@ -242,6 +400,10 @@ def main():
         f.write(contributions_svg(total, weeks))
     with open(os.path.join(OUT, "whoami.svg"), "w") as f:
         f.write(whoami_svg(avatar, total, s))
+    with open(os.path.join(OUT, "header.svg"), "w") as f:
+        f.write(header_svg())
+    with open(os.path.join(OUT, "activity.svg"), "w") as f:
+        f.write(activity_svg(fetch_repos()))
     print(f"total={total} current={s['current']} longest={s['longest']} active={s['active']}")
 
 

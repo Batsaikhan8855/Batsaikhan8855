@@ -1,13 +1,23 @@
 <div align="center">
 
+<img src="assets/header.svg" alt="Batsaikhan" width="100%"/>
+
+<a href="https://github.com/Batsaikhan8855?tab=repositories"><img src="https://img.shields.io/badge/repos-browse-3fb950?style=flat-square&labelColor=0d1117&logo=github" alt="repos"/></a>
+<img src="https://komarev.com/ghpvc/?username=Batsaikhan8855&label=profile%20views&color=3fb950&style=flat-square&labelColor=0d1117" alt="profile views"/>
+<a href="https://github.com/Batsaikhan8855?tab=followers"><img src="https://img.shields.io/github/followers/Batsaikhan8855?style=flat-square&label=followers&color=3fb950&labelColor=0d1117" alt="followers"/></a>
+
+<br/><br/>
+
 <img src="assets/contributions.svg" alt="contributions" width="100%"/>
 
 <img src="assets/whoami.svg" alt="whoami" width="100%"/>
 
+<img src="assets/activity.svg" alt="recent activity" width="100%"/>
+
 <br/>
 
 ```console
-batsaikhan8855@github ~ $ cat about.txt
+batsaikhan8855@github ~ $ cat about.yml
 ```
 
 </div>
@@ -42,6 +52,12 @@ batsaikhan8855@github ~ $ ./stack.sh
 
 <br/><br/>
 
-<sub>cards regenerate daily via GitHub Actions · <code>scripts/generate.py</code></sub>
+```console
+batsaikhan8855@github ~ $ ./snake.sh --eat contributions
+```
+
+<img src="https://raw.githubusercontent.com/Batsaikhan8855/Batsaikhan8855/output/snake.svg" alt="snake eating contributions" width="100%"/>
+
+<sub>every card on this page regenerates daily via GitHub Actions · <code>scripts/generate.py</code></sub>
 
 </div>
