@@ -210,7 +210,7 @@ def whoami_svg(avatar_url, last_push=None):
     body.append(f'<rect x="{sx0}" y="{sy0}" width="{sw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
     body.append(f'<text x="{sx0 + 12}" y="{sy0 + 18}" fill="{MUTED}" font-size="10">identity.yml</text>')
     rows = [
-        ("Name", "Batsaikhann", TEXT),
+        ("Name", "Batsaikhan", TEXT),
         ("Location", "Ulaanbaatar, Mongolia 🇲🇳", TEXT),
         ("Role", "Full-stack Developer", TEXT),
         ("Focus", "Web · Mobile · Systems", TEXT),
@@ -257,7 +257,14 @@ def matrix_rain(w, h, cols=46, seed=8855):
     rnd = random.Random(seed)  # fixed seed keeps the file stable between runs
     glyphs = "АБВГДЕЁЖЗИЙКЛМНОӨПРСТУҮФХЦЧШЩЪЫЬЭЮЯ0123456789{}<>/=;$#"
     fs = 12
-    out = [f'<clipPath id="rain"><rect x="1" y="33" width="{w - 2}" height="{h - 34}" rx="12"/></clipPath><g clip-path="url(#rain)" font-size="{fs}">']
+    out = [
+        f'<clipPath id="rain"><rect x="1" y="33" width="{w - 2}" height="{h - 34}" rx="12"/></clipPath>'
+        f'<linearGradient id="fade"><stop offset="0" stop-color="#fff"/><stop offset="0.16" stop-color="#fff"/>'
+        f'<stop offset="0.26" stop-color="#fff" stop-opacity="0.08"/><stop offset="0.74" stop-color="#fff" stop-opacity="0.08"/>'
+        f'<stop offset="0.84" stop-color="#fff"/><stop offset="1" stop-color="#fff"/></linearGradient>'
+        f'<mask id="edges"><rect width="{w}" height="{h}" fill="url(#fade)"/></mask>'
+        f'<g clip-path="url(#rain)" mask="url(#edges)" font-size="{fs}">'
+    ]
     for c in range(cols):
         x = 10 + c * (w - 20) / cols
         n = rnd.randint(8, 16)
@@ -270,7 +277,7 @@ def matrix_rain(w, h, cols=46, seed=8855):
         )
         span = n * (fs + 2)
         out.append(
-            f'<text opacity="0.3">{chars}<animateTransform attributeName="transform" type="translate" '
+            f'<text opacity="0.2">{chars}<animateTransform attributeName="transform" type="translate" '
             f'from="0 {-span}" to="0 {h}" dur="{dur:.2f}s" begin="{delay:.2f}s" repeatCount="indefinite"/></text>'
         )
     out.append("</g>")
@@ -281,15 +288,22 @@ def bogd_khan(w, h):
     """Bogd Khan Uul, the ridge south of Ulaanbaatar, as a quiet silhouette along the bottom edge."""
     import math
 
-    pts = []
-    for x in range(0, w + 1, 6):
-        y = h - 30 - 14 * math.sin(x / 75) - 7 * math.sin(x / 21 + 1.3) - 30 * math.exp(-(((x - 600) / 110) ** 2))
-        pts.append(f"{x},{y:.1f}")
-    ridge = " L".join(pts)
+    def ridge(peaks, base, jag):
+        pts = []
+        for x in range(0, w + 1, 5):
+            y = max(hh * max(0.0, 1 - abs(x - px) / pw) for px, hh, pw in peaks)
+            y += jag * (math.sin(x / 9.0) + 0.6 * math.sin(x / 4.1 + 2))
+            pts.append(f"{x},{base - max(0, y):.1f}")
+        return " L".join(pts)
+
+    far = ridge([(150, 34, 190), (380, 26, 160), (700, 36, 210), (880, 24, 140)], h - 26, 0.35)
+    near = ridge([(70, 16, 130), (250, 26, 140), (430, 18, 120), (610, 46, 190), (790, 28, 150)], h - 14, 0.5)
     return (
         f'<clipPath id="ridge"><rect x="1" y="33" width="{w - 2}" height="{h - 34}" rx="12"/></clipPath>'
-        f'<g clip-path="url(#ridge)"><path d="M0,{h} L{ridge} L{w},{h} Z" fill="{PANEL}"/>'
-        f'<path d="M{ridge}" fill="none" stroke="{GOLD}" stroke-opacity="0.35" stroke-width="1.2"/></g>'
+        f'<g clip-path="url(#ridge)">'
+        f'<path d="M{far}" fill="none" stroke="{GOLD}" stroke-opacity="0.14" stroke-width="1"/>'
+        f'<path d="M0,{h} L{near} L{w},{h} Z" fill="{PANEL}"/>'
+        f'<path d="M{near}" fill="none" stroke="{GOLD}" stroke-opacity="0.4" stroke-width="1.2"/></g>'
     )
 
 
@@ -307,10 +321,10 @@ def _mongol_name(x, y, height):
     return f'<image x="{x - iw / 2:.1f}" y="{y}" width="{iw:.1f}" height="{height}" href="{uri}"/>'
 
 
-def hero_svg(name="BATSAIKHANN"):
+def hero_svg(name="BATSAIKHAN"):
     from extras import _soyombo
 
-    w, h, px = 900, 340, 7.9
+    w, h, px = 900, 340, 8.6
     cols = sum(len(GLYPHS[c][0]) + 1 for c in name) - 1
     gx0, gy0 = (w - cols * px) / 2, 92
     shadow, front = [], []
@@ -342,15 +356,20 @@ def hero_svg(name="BATSAIKHANN"):
     sub_y = ty + 34
     info_y = sub_y + 46
     info = [("FULL-STACK DEVELOPER", TEXT), ("ULAANBAATAR / MONGOLIA", GOLD), ("BUILDING SPORTHUB", TEXT)]
-    info_svg = "".join(
-        f'<text x="{w * (i + 1) / 4:.0f}" y="{info_y}" fill="{col}" font-size="12" font-weight="700" '
-        f'letter-spacing="2" text-anchor="middle">{t}</text>'
-        for i, (t, col) in enumerate(info)
-    ) + "".join(
-        f'<text x="{w * (2 * i + 3) / 8:.0f}" y="{info_y}" fill="{BORDER}" font-size="12" text-anchor="middle">│</text>'
-        for i in range(2)
-    )
-    sh = 104
+    adv, gap = 12 * 0.6 + 2, 30  # monospace advance at 12px + letter-spacing; space around each divider
+    widths = [len(t) * adv - 2 for t, _ in info]
+    ix = (w - sum(widths) - gap * 2 * (len(info) - 1)) / 2
+    parts = []
+    for i, ((t, col), tw) in enumerate(zip(info, widths)):
+        parts.append(
+            f'<text x="{ix:.1f}" y="{info_y}" fill="{col}" font-size="12" font-weight="700" letter-spacing="2">{t}</text>'
+        )
+        ix += tw
+        if i < len(info) - 1:
+            parts.append(f'<text x="{ix + gap:.1f}" y="{info_y}" fill="{BORDER}" font-size="12" text-anchor="middle">│</text>')
+            ix += gap * 2
+    info_svg = "".join(parts)
+    side, side_y = 140, 108
     body = (
         f'<defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="{gx0}" x2="{gx0 + cols * px}" y1="0" y2="0">'
         f'<stop offset="0" stop-color="#2ea043"/><stop offset="0.5" stop-color="#56d364"/><stop offset="1" stop-color="#2ea043"/>'
@@ -368,8 +387,8 @@ def hero_svg(name="BATSAIKHANN"):
         f'<text x="{w / 2}" y="{sub_y}" fill="{MUTED}" font-size="13" text-anchor="middle">'
         f"building products · shipping ideas · breaking things · fixing them</text>"
         f"{info_svg}"
-        f'{_mongol_name(46, 84, h - 150)}'
-        f'{_soyombo(w - 46 - sh * 172 / 312 / 2, 84, sh, GOLD)}'
+        f'{_mongol_name(50, side_y - 8, side + 16)}'
+        f'{_soyombo(w - 50 - side * 172 / 312 / 2, side_y, side, GOLD)}'
     )
     return window(w, h, f"{USER.lower()} — welcome.sh", body)
 

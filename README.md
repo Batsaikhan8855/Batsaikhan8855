@@ -1,4 +1,4 @@
-<!-- BATSAIKHANN OS — every card in assets/ is regenerated hourly by .github/workflows/update.yml (scripts/generate.py) -->
+<!-- BATSAIKHAN OS — every card in assets/ is regenerated hourly by .github/workflows/update.yml (scripts/generate.py) -->
 
 <div align="center">
 
@@ -6,7 +6,7 @@
 
 #### `/boot`
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/hero.svg"><img src="assets/hero.svg" alt="BATSAIKHANN — full-stack developer from Ulaanbaatar, Mongolia" width="100%"/></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/hero.svg"><img src="assets/hero.svg" alt="BATSAIKHAN — full-stack developer from Ulaanbaatar, Mongolia" width="100%"/></picture>
 
 <sub><a href="#boot"><code>/boot</code></a> · <a href="#whoami"><code>/whoami</code></a> · <a href="#current-mission"><code>/current-mission</code></a> · <a href="#activity"><code>/activity</code></a> · <a href="#stack"><code>/stack</code></a> · <a href="#achievements"><code>/achievements</code></a> · <a href="#projects"><code>/projects</code></a> · <a href="#network"><code>/network</code></a></sub>
 
