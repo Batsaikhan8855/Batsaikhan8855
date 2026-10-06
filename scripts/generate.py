@@ -5,10 +5,10 @@ Outputs:
   assets/whoami.svg         - `whoami` panel: ASCII portrait + stats + monthly bars
   assets/header.svg         - block-letter name banner with a typing tagline
   assets/activity.svg       - `git log` of recent commits + language breakdown
-  assets/city.svg, habits.svg, neofetch.svg, ub.svg, wakatime.svg, ... - see extras.py
+  assets/city.svg, habits.svg, neofetch.svg, ub.svg, ... - see extras.py
   assets/light/*.svg        - the same cards recoloured for GitHub's light theme
 
-Requires env GH_TOKEN (or GITHUB_TOKEN); optional GH_USER and WAKATIME_API_KEY.
+Requires env GH_TOKEN (or GITHUB_TOKEN) and optionally GH_USER.
 """
 import datetime as dt
 import io
@@ -512,7 +512,6 @@ def main():
     write_card("habits.svg", extras.habits_svg(days, s, prof))
     write_card("neofetch.svg", extras.neofetch_svg(total, s, prof))
     write_card("ub.svg", extras.ub_svg(extras.fetch_weather()))
-    write_card("wakatime.svg", extras.wakatime_svg(extras.fetch_wakatime()))
     write_card("pacman.svg", extras.pacman_svg(weeks))
     write_card("projects.svg", extras.projects_svg(os.path.join(OUT, "shots")))
     print(f"total={total} current={s['current']} longest={s['longest']} active={s['active']}")

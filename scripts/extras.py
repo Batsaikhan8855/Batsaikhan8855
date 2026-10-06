@@ -489,11 +489,16 @@ def pacman_svg(weeks):
 
 # ---------------------------------------------------------------- live project screenshots
 
+# (screenshot name, host, description, stack, own repo?) — team projects get a tag
 PROJECTS = [
-    ("100ail", "100ail.vercel.app", "https://github.com/Batsaikhann/100ail",
-     "BarilgaHUB — construction materials marketplace", "NestJS · Next.js · PostgreSQL"),
-    ("sporthub", "sporthub-eight.vercel.app", "https://sporthub-eight.vercel.app",
-     "SportHub Mongolia — one membership for every sport", "Next.js · TypeScript · Supabase"),
+    ("100ail", "100ail.vercel.app",
+     "BarilgaHUB — construction materials marketplace", "NestJS · Next.js · PostgreSQL", True),
+    ("sporthub", "sporthub-eight.vercel.app",
+     "SportHub Mongolia — one membership for every sport", "Next.js · TypeScript · Supabase", True),
+    ("gymhub", "gymhubmn.vercel.app",
+     "GymHub — one membership for 30+ fitness clubs", "Next.js · TypeScript", False),
+    ("sparkxp", "spark-xp-web.vercel.app",
+     "SparkXP — gamified English learning app", "React Native · NestJS · PostgreSQL", False),
 ]
 
 
@@ -505,14 +510,15 @@ def _data_uri(path, mime):
 
 
 def projects_svg(shots_dir):
-    w, h = 900, 420
+    pw, ch, gap = 420, 320, 20
+    rows = (len(PROJECTS) + 1) // 2
+    w, h = 900, 80 + rows * ch + (rows - 1) * gap + 20
     body = [prompt(w / 2, 60, "open ./projects --live", "middle")]
-    pw, gap = 420, 20
-    for i, (name, host, _link, desc, stack) in enumerate(PROJECTS):
-        x0, y0 = 20 + i * (pw + gap), 80
+    for i, (name, host, desc, stack, own) in enumerate(PROJECTS):
+        x0, y0 = 20 + (i % 2) * (pw + gap), 80 + (i // 2) * (ch + gap)
         ih = pw * 500 / 800 * 0.9
         iw = pw - 20
-        body.append(f'<rect x="{x0}" y="{y0}" width="{pw}" height="{h - y0 - 20}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
+        body.append(f'<rect x="{x0}" y="{y0}" width="{pw}" height="{ch}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
         # browser chrome
         body.append(
             f'<circle cx="{x0 + 16}" cy="{y0 + 16}" r="4" fill="#ff5f56"/><circle cx="{x0 + 28}" cy="{y0 + 16}" r="4" fill="#ffbd2e"/>'
@@ -539,82 +545,9 @@ def projects_svg(shots_dir):
             f'values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/></circle>'
             f'<text x="{x0 + pw - 18}" y="{y0 + 20}" font-size="10" fill="{GREEN}" text-anchor="end">live</text>'
         )
+        if not own:
+            body.append(
+                f'<text x="{x0 + pw - 10}" y="{ty + 18}" font-size="10" fill="#bc8cff" text-anchor="end">● team project</text>'
+            )
     return window(w, h, f"{USER.lower()} — projects", "".join(body))
 
-
-# ---------------------------------------------------------------- WakaTime coding time (last 7 days)
-
-def fetch_wakatime():
-    """Last-7-days stats, or None when WAKATIME_API_KEY is unset or the API has nothing yet."""
-    import base64
-    import json
-    import urllib.request
-
-    key = os.environ.get("WAKATIME_API_KEY")
-    if not key:
-        return None
-    req = urllib.request.Request(
-        "https://wakatime.com/api/v1/users/current/stats/last_7_days",
-        headers={"Authorization": "Basic " + base64.b64encode(key.encode()).decode()},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            data = json.load(r).get("data") or {}
-    except Exception as e:  # a WakaTime outage must not break the other cards
-        print(f"wakatime: {e}")
-        return None
-    return data if data.get("languages") else None
-
-
-WAKA_COLORS = ["#3fb950", "#58a6ff", "#d29922", "#bc8cff", "#39c5cf", "#f85149"]
-
-
-def wakatime_svg(data):
-    w, h = 900, 300
-    body = [prompt(w / 2, 60, "wakatime --today --last-7-days", "middle")]
-    px0, py0, ph = 20, 80, 200
-    if not data:
-        body.append(f'<rect x="{px0}" y="{py0}" width="{w - 40}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
-        body.append(
-            f'<text x="{w / 2}" y="{py0 + ph / 2}" fill="{MUTED}" font-size="13" text-anchor="middle">'
-            f"collecting coding stats… check back soon</text>"
-        )
-        return window(w, h, f"{USER.lower()} — wakatime", "".join(body))
-    # summary tiles
-    sw = 260
-    body.append(f'<rect x="{px0}" y="{py0}" width="{sw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
-    body.append(f'<text x="{px0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">summary.json</text>')
-    best = data.get("best_day") or {}
-    tiles = [
-        ("coded this week", data.get("human_readable_total") or "0 secs", True),
-        ("daily average", data.get("human_readable_daily_average") or "0 secs", False),
-        ("best day", f"{best.get('text', '-')}", False),
-    ]
-    for i, (label, val, hi) in enumerate(tiles):
-        ty = py0 + 30 + i * 54
-        body.append(
-            f'<rect x="{px0 + 14}" y="{ty}" width="{sw - 28}" height="46" rx="6" fill="{BG}" stroke="{BORDER}"/>'
-            f'<text x="{px0 + 24}" y="{ty + 16}" fill="{MUTED}" font-size="10">$ {escape(label)}</text>'
-            f'<text x="{px0 + 24}" y="{ty + 36}" font-size="16" font-weight="700" fill="{GREEN if hi else TEXT}">{escape(val)}</text>'
-        )
-    # languages
-    lx0 = px0 + sw + 20
-    lw = w - lx0 - 20
-    body.append(f'<rect x="{lx0}" y="{py0}" width="{lw}" height="{ph}" rx="8" fill="{PANEL}" stroke="{BORDER}"/>')
-    body.append(f'<text x="{lx0 + 12}" y="{py0 + 18}" fill="{MUTED}" font-size="10">languages (last 7 days)</text>')
-    langs = [l for l in data["languages"] if l.get("total_seconds", 0) > 0][:6]
-    top = max((l.get("percent", 0) for l in langs), default=0) or 1
-    bx, bw = lx0 + 130, lw - 130 - 120
-    for i, l in enumerate(langs):
-        y = py0 + 44 + i * 25
-        col = WAKA_COLORS[i % len(WAKA_COLORS)]
-        bar = max(2, bw * l.get("percent", 0) / top)
-        body.append(
-            f'<text x="{lx0 + 14}" y="{y}" font-size="12" fill="{TEXT}">{escape(l.get("name", "?")[:14])}</text>'
-            f'<rect x="{bx}" y="{y - 10}" width="{bw}" height="10" rx="3" fill="{BG}"/>'
-            f'<rect x="{bx}" y="{y - 10}" width="{bar:.1f}" height="10" rx="3" fill="{col}">'
-            f'<animate attributeName="width" from="0" to="{bar:.1f}" begin="{0.3 + i * 0.1:.1f}s" dur="0.6s" fill="freeze"/></rect>'
-            f'<text x="{lx0 + lw - 14}" y="{y}" font-size="11" fill="{MUTED}" text-anchor="end">'
-            f'{escape(l.get("text", ""))}</text>'
-        )
-    return window(w, h, f"{USER.lower()} — wakatime", "".join(body))

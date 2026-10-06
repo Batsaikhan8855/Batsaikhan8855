@@ -15,8 +15,6 @@
 
 <picture><source media="(prefers-color-scheme: light)" srcset="assets/light/activity.svg"><img src="assets/activity.svg" alt="recent activity" width="100%"/></picture>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/wakatime.svg"><img src="assets/wakatime.svg" alt="coding time this week" width="100%"/></picture>
-
 <picture><source media="(prefers-color-scheme: light)" srcset="assets/light/habits.svg"><img src="assets/habits.svg" alt="commit clock and achievements" width="100%"/></picture>
 
 <picture><source media="(prefers-color-scheme: light)" srcset="assets/light/neofetch.svg"><img src="assets/neofetch.svg" alt="neofetch" width="100%"/></picture>
@@ -25,12 +23,16 @@
 
 <br/>
 
-<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/projects.svg"><img src="assets/projects.svg" alt="live projects: 100ail and SportHub" width="100%"/></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="assets/light/projects.svg"><img src="assets/projects.svg" alt="live projects: 100ail, SportHub, GymHub and SparkXP" width="100%"/></picture>
 
 <a href="https://100ail.vercel.app"><b>100ail</b></a> · <a href="https://github.com/Batsaikhann/100ail">code</a>
 &nbsp;│&nbsp;
 <a href="https://sporthub-eight.vercel.app"><b>SportHub</b></a>
 &nbsp;│&nbsp;
+<a href="https://gymhubmn.vercel.app"><b>GymHub</b></a> <sub>team</sub>
+&nbsp;│&nbsp;
+<a href="https://spark-xp-web.vercel.app"><b>SparkXP</b></a> · <a href="https://github.com/usukh6ayar/SparkXP">code</a> <sub>team</sub>
+<br/>
 <a href="https://github.com/Batsaikhann/bikemap_ub"><b>bikemap_ub</b></a> <sub>bike map for Ulaanbaatar · Python</sub>
 &nbsp;│&nbsp;
 <a href="https://github.com/Batsaikhann/Unity-Endless-Game"><b>Unity-Endless-Game</b></a> <sub>endless runner · Unity · C#</sub>

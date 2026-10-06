@@ -16,3 +16,5 @@ Image.open(sys.argv[1]).convert('RGB').resize((800, 500), Image.LANCZOS).save(sy
 }
 shoot 100ail https://100ail.vercel.app
 shoot sporthub https://sporthub-eight.vercel.app
+shoot sparkxp https://spark-xp-web.vercel.app
+shoot gymhub https://gymhubmn.vercel.app
